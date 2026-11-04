@@ -1,6 +1,7 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { quanto, traQuanto } from "../tempo.js";
+import { urlInCache } from "../foto.js";
 
 /** Titolo della sezione con il pulsante Account a destra. */
 export function testata(titolo, sotto = "") {
@@ -77,3 +78,13 @@ export function dettagli(p, { conStanza = false } = {}) {
   const tipo = p.tipo && !p.nome.toLowerCase().includes(p.tipo.toLowerCase()) ? p.tipo : null;
   return [conStanza ? p.stanza : null, tipo, p.vaso, idro(p) ? "idroponica" : null].filter(Boolean).join(" · ");
 }
+
+/** Foto della pianta: l'indirizzo firmato arriva dopo (idrataFoto), se non è già in memoria. Senza foto, un germoglio. */
+export function foto(percorso, { classe = "", alt = "" } = {}) {
+  if (!percorso) return html`<div class="foto senza ${classe}">${icona("sprout", classe.includes("mini") ? 22 : 34, 1.6)}</div>`;
+  const src = urlInCache(percorso);
+  return html`<div class="foto ${classe}"><img data-foto="${percorso}" ${src ? html`src="${src}"` : ""} alt="${alt}" decoding="async"></div>`;
+}
+
+/** Miniatura quadrata per gli elenchi. */
+export const miniatura = (p) => foto(p.miniatura, { classe: "mini" });

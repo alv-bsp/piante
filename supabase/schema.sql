@@ -15,6 +15,8 @@ create table public.piante (
   giorni_estate  smallint not null default 7  check (giorni_estate between 1 and 90),    -- aprile–settembre
   giorni_inverno smallint not null default 14 check (giorni_inverno between 1 and 120),  -- ottobre–marzo
   note           text check (char_length(note) <= 2000),
+  foto           text,   -- percorso nel bucket: <user_id>/<pianta_id>/<versione>.<webp|jpg>
+  miniatura      text,   -- stesso schema, file -mini
   archiviata_il  timestamptz,      -- tolta di casa: sparisce dagli elenchi, lo storico resta
   creata_il      timestamptz not null default now(),
   modificata_il  timestamptz not null default now()
@@ -117,6 +119,25 @@ create policy "push_iscrizioni: solo le mie" on public.push_iscrizioni
   for all to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
+
+-- ─── Foto: bucket privato ───────────────────────────────────────────
+-- Separato dal bucket "foto" dell'Armadio. Ogni file sta sotto una cartella col mio user_id; lettura solo con
+-- signed URL. Niente policy di update: una foto nuova è un file nuovo, la vecchia si cancella.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('piante', 'piante', false, 1048576, array['image/webp', 'image/jpeg'])
+on conflict (id) do nothing;
+
+create policy "piante: leggo i miei file" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'piante' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "piante: carico nella mia cartella" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'piante' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+create policy "piante: cancello i miei file" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'piante' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- ─── ping() per il keep-alive ───────────────────────────────────────
 -- Nel progetto dell'Armadio esiste già: "or replace" la lascia identica.

@@ -412,7 +412,7 @@
 .carta-testa { display: flex; align-items: center; gap: var(--s3); color: inherit; text-decoration: none; }
 .carta-testa > svg { color: var(--ink-2); }
 .carta-nome { font-size: var(--t-md); font-weight: 650; letter-spacing: -.01em; }
-.in-ritardo { color: var(--accent-text); font-weight: 650; }
+.in-ritardo { color: var(--accent-text); font-weight: 650; white-space: nowrap; }
 .carta-nota {
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -615,3 +615,39 @@
   font-size: var(--t-sm);
   font-weight: 650;
 }
+
+/* ───────── Foto: piatte, sono il contenuto ───────── */
+.foto {
+  position: relative;
+  flex: none;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--photo-bg);
+}
+.foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.foto.senza { display: grid; place-items: center; color: var(--ink-2); }
+.foto.mini { width: 52px; aspect-ratio: 1; border-radius: 12px; }
+.carta .foto.mini { width: 48px; }
+.foto.grande { width: 100%; max-height: 56dvh; border-radius: var(--r-md); }
+.foto.vuota {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s2);
+  border: 0;
+  background: var(--base);
+  box-shadow: var(--in2);
+  color: var(--ink-2);
+  font: 550 var(--t-sm)/1.3 var(--font);
+}
+.foto.attesa { display: grid; place-items: center; color: var(--ink-2); font-size: var(--t-sm); }
+.scheda > .foto.grande { aspect-ratio: 16 / 9; margin-bottom: var(--s4); }
+/* Nella scheda la foto non deve spingere sotto la piega lo stato e i pulsanti */
+.foto-scheda { position: relative; margin-bottom: var(--s4); }
+.foto-scheda .foto.grande { aspect-ratio: 4 / 3; max-height: 40dvh; }
+.foto-scheda .cambia-foto { position: absolute; right: 12px; bottom: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+.editor-foto { display: grid; justify-items: center; gap: var(--s3); }
+.editor-foto .foto.grande { width: min(62vw, 260px); }
+.editor-foto-azioni { display: flex; align-items: center; gap: var(--s4); }
+.riga:active .foto, .carta-testa:active .foto { opacity: .85; }

@@ -1,12 +1,13 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { stato, aggiorna, trovaPianta, statoDi } from "../stato.js";
-import { caricaStorico, annullaCura, archiviaPianta } from "../dati.js";
+import { caricaStorico, annullaCura, archiviaPianta, impostaFoto } from "../dati.js";
+import { preparaFoto } from "../foto.js";
 import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
 import { rinvio } from "../../supabase/functions/_shared/scadenze.js";
-import { barra, vuoto, azioniCura, verbi } from "./comuni.js";
+import { barra, vuoto, azioniCura, verbi, foto } from "./comuni.js";
 
 export const conTabbar = true;
 export const fab = () => "";
@@ -14,6 +15,8 @@ export const fab = () => "";
 const inArrivo = new Set();
 // "Bagnata un altro giorno": aperto e giorno scelto sopravvivono ai ridisegni.
 let altro = { id: null, giorno: null };
+// Foto al volo: id della pianta la cui foto si sta preparando o caricando.
+let fotoInCorso = null;
 
 export function render(s, { rotta, avviso = "" }) {
   const id = rotta.param[0];
@@ -43,6 +46,7 @@ export function render(s, { rotta, avviso = "" }) {
     })}
     ${avviso}
     <article class="scheda">
+      ${fotoScheda(p)}
       <h1 tabindex="-1">${p.nome}</h1>
       <p class="sotto">${[p.tipo, p.stanza].filter(Boolean).join(" · ")}</p>
 
@@ -83,6 +87,40 @@ export function render(s, { rotta, avviso = "" }) {
         ? html`<button class="btn largo" type="button" data-azione="rimetti" data-id="${p.id}">${icona("undo", 18)}Rimetti in casa</button>`
         : html`<button class="btn largo" type="button" data-azione="togli" data-id="${p.id}">${icona("archive", 18)}Togli dalla casa</button>`}
     </article>`;
+}
+
+function fotoScheda(p) {
+  if (fotoInCorso === p.id) return html`<div class="foto grande attesa"><span>Carico la foto…</span></div>`;
+  if (!p.foto) {
+    return html`
+      <button class="foto grande vuota" type="button" data-azione="foto-pianta" data-id="${p.id}">
+        ${icona("camera", 30, 1.5)}<span>Aggiungi una foto</span>
+      </button>`;
+  }
+  return html`
+    <div class="foto-scheda">
+      ${foto(p.foto, { classe: "grande", alt: `Foto: ${p.nome}` })}
+      <button class="icona-btn cambia-foto" type="button" data-azione="foto-pianta" data-id="${p.id}"
+        aria-label="Cambia la foto">${icona("camera", 20)}</button>
+    </div>`;
+}
+
+/** Foto scelta dal selettore (main.js) per una pianta: si salva subito, senza passare dal modulo. */
+export async function fotoVeloce(id, file) {
+  const p = trovaPianta(id);
+  if (!p || fotoInCorso) return;
+  fotoInCorso = id;
+  aggiorna({});
+  try {
+    await impostaFoto(p, await preparaFoto(file));
+    toast("Foto salvata.");
+  } catch (e) {
+    console.error("foto", e);
+    toast(navigator.onLine ? "Non sono riuscito a salvare la foto. Riprova." : "Sei offline: riprova quando c'è rete.");
+  } finally {
+    fotoInCorso = null;
+    aggiorna({});
+  }
 }
 
 function storico(p, cure) {

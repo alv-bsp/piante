@@ -1,7 +1,8 @@
 import { sb } from "./supabase.js";
 import { stato, aggiorna } from "./stato.js";
+import { caricaFoto, rimuoviFoto } from "./foto.js";
 
-const CAMPI_PIANTA = "id, nome, tipo, stanza, vaso, substrato, giorni_estate, giorni_inverno, note, archiviata_il, creata_il, modificata_il";
+const CAMPI_PIANTA = "id, nome, tipo, stanza, vaso, substrato, giorni_estate, giorni_inverno, note, foto, miniatura, archiviata_il, creata_il, modificata_il";
 
 /**
  * Carica tutto quello che serve dopo il login: piante, ultime cure e ora del promemoria.
@@ -35,8 +36,20 @@ export async function caricaTutto() {
 
 // ───────────────────────────── piante
 
-/** Salva una pianta nuova o modificata. Per una nuova, `ultimaVolta` (AAAA-MM-GG) registra l'ultima annaffiatura. */
+/**
+ * Salva una pianta nuova o modificata. Se c'è una foto nuova la carica prima, e cancella la vecchia solo dopo che il
+ * salvataggio è andato a buon fine. Per una nuova, `ultimaVolta` (AAAA-MM-GG) registra l'ultima annaffiatura.
+ */
 export async function salvaPianta(bozza) {
+  const nuova = !bozza.id;
+  const id = bozza.id || crypto.randomUUID();
+  const precedente = nuova ? null : stato.piante.find((p) => p.id === id);
+
+  let percorsi = { foto: precedente?.foto ?? null, miniatura: precedente?.miniatura ?? null };
+  const fotoNuova = Boolean(bozza.foto?.grande);
+  if (fotoNuova) percorsi = await caricaFoto(stato.sessione.user.id, id, bozza.foto);
+  else if (bozza.fotoRimossa) percorsi = { foto: null, miniatura: null };
+
   const riga = {
     nome: bozza.nome.trim(),
     tipo: bozza.tipo.trim() || null,
@@ -46,16 +59,32 @@ export async function salvaPianta(bozza) {
     giorni_estate: bozza.giorni_estate,
     giorni_inverno: bozza.giorni_inverno,
     note: bozza.note.trim() || null,
+    ...percorsi,
   };
-  const nuova = !bozza.id;
   const { data, error } = nuova
-    ? await sb.from("piante").insert(riga).select(CAMPI_PIANTA).single()
-    : await sb.from("piante").update(riga).eq("id", bozza.id).select(CAMPI_PIANTA).single();
-  if (error) throw error;
+    ? await sb.from("piante").insert({ id, ...riga }).select(CAMPI_PIANTA).single()
+    : await sb.from("piante").update(riga).eq("id", id).select(CAMPI_PIANTA).single();
+  if (error) {
+    if (fotoNuova) await rimuoviFoto([percorsi.foto, percorsi.miniatura]);
+    throw error;
+  }
 
+  if (precedente && (fotoNuova || bozza.fotoRimossa)) rimuoviFoto([precedente.foto, precedente.miniatura]);
   aggiorna({ piante: nuova ? [...stato.piante, data] : stato.piante.map((p) => (p.id === data.id ? data : p)) });
   if (nuova && bozza.ultimaVolta) await registraCura(data, "bagnata", mezzogiorno(bozza.ultimaVolta));
   return data;
+}
+
+/** Foto al volo dalla scheda: carica la foto già preparata, aggiorna la pianta, poi cancella quella vecchia. */
+export async function impostaFoto(pianta, foto) {
+  const percorsi = await caricaFoto(stato.sessione.user.id, pianta.id, foto);
+  const { data, error } = await sb.from("piante").update(percorsi).eq("id", pianta.id).select(CAMPI_PIANTA).single();
+  if (error) {
+    await rimuoviFoto([percorsi.foto, percorsi.miniatura]);
+    throw error;
+  }
+  rimuoviFoto([pianta.foto, pianta.miniatura]);
+  aggiorna({ piante: stato.piante.map((p) => (p.id === data.id ? data : p)) });
 }
 
 /** Aggiunge in un colpo le piante di partenza (vedi partenza.js). */
@@ -78,13 +107,14 @@ export async function archiviaPianta(pianta, archiviata) {
   aggiorna({ piante: stato.piante.map((p) => (p.id === data.id ? data : p)) });
 }
 
-/** Elimina per sempre la pianta e il suo storico. */
+/** Elimina per sempre la pianta e il suo storico, poi le sue foto. */
 export async function eliminaPianta(pianta) {
   const { error } = await sb.from("piante").delete().eq("id", pianta.id);
   if (error) throw error;
   const ultime = new Map(stato.ultime);
   ultime.delete(pianta.id);
   aggiorna({ piante: stato.piante.filter((p) => p.id !== pianta.id), ultime });
+  rimuoviFoto([pianta.foto, pianta.miniatura]);
 }
 
 // ───────────────────────────── cure

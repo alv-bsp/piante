@@ -7,6 +7,7 @@ import { sb } from "./supabase.js";
 import { stato, aggiorna, ascolta, azzeraDati, scadute } from "./stato.js";
 import { caricaTutto, aggiungiPiante } from "./dati.js";
 import { verificaNotifiche, aggiornaBadge } from "./notifiche.js";
+import { idrataFoto } from "./foto.js";
 import { PIANTE_DI_PARTENZA } from "./partenza.js";
 import { esci } from "./accesso.js";
 import { rotta, normalizza, SEZIONI } from "./router.js";
@@ -27,6 +28,7 @@ const TAB = {
   casa: { etichetta: "Casa", icona: "house" },
 };
 const app = document.getElementById("app");
+const sceltaFoto = document.getElementById("scegli-foto");
 
 function vistaPer(r) {
   if (r.nome === "nuova") return editor;
@@ -95,11 +97,13 @@ function disegna() {
       try { if (selezione) el.setSelectionRange(...selezione); } catch { /* campi senza selezione */ }
     }
   }
+  if (nome === "app") idrataFoto(app);
   if (nome === "app" && stato.piante) aggiornaBadge(scadute().length);
 }
 
 // ───────────────────────────────────────── azioni
 let caricamentoPartenza = false;
+let fotoPer = "editor"; // dove va la foto scelta: il modulo, oppure l'id della pianta (foto al volo dalla scheda)
 
 const AZIONI = {
   ...cure.azioni,
@@ -107,6 +111,8 @@ const AZIONI = {
   ...editor.azioni,
   ...account.azioni,
   account: account.apri,
+  "scegli-foto": () => { fotoPer = "editor"; sceltaFoto.click(); },
+  "foto-pianta": (el) => { fotoPer = el.dataset.id; sceltaFoto.click(); },
   "chiudi-foglio": chiudiFoglio,
   riprova: () => caricaTutto(),
   partenza: async (el) => {
@@ -154,6 +160,14 @@ document.addEventListener("change", (e) => {
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (e.target.id === "form-accesso") accesso.invia(e.target);
+});
+
+sceltaFoto.addEventListener("change", () => {
+  const file = sceltaFoto.files?.[0];
+  sceltaFoto.value = ""; // così si può scegliere di nuovo lo stesso file
+  if (!file) return;
+  if (fotoPer === "editor") editor.cambiaFoto(file);
+  else pianta.fotoVeloce(fotoPer, file);
 });
 
 let rottaPrecedente = rotta();

@@ -5,6 +5,7 @@ import { salvaPianta } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { toast } from "../ui/avvisi.js";
 import { giornoRoma, stagione } from "../../supabase/functions/_shared/scadenze.js";
+import { preparaFoto, urlInCache } from "../foto.js";
 import { barra, vuoto } from "./comuni.js";
 
 export const conTabbar = false;
@@ -24,6 +25,10 @@ const nuova = () => ({
   giorni_inverno: 14,
   note: "",
   ultimaVolta: giornoRoma(),
+  foto: null,          // foto nuova preparata nel browser
+  fotoAttuale: null,   // percorso della foto già salvata
+  fotoRimossa: false,
+  inPreparazione: false,
   salvataggio: false,
 });
 
@@ -39,9 +44,56 @@ const daPianta = (p) => ({
   giorni_inverno: p.giorni_inverno,
   note: p.note || "",
   ultimaVolta: "",
+  fotoAttuale: p.foto,
 });
 
 const LIMITI = { giorni_estate: [1, 90], giorni_inverno: [1, 120] };
+
+/** Foto scelta dal selettore (main.js): la prepara nel browser e la mostra subito. */
+export function cambiaFoto(file) {
+  if (!bozza) bozza = nuova();
+  liberaAnteprime();
+  bozza.foto = null;
+  bozza.fotoRimossa = false;
+  bozza.inPreparazione = true;
+  aggiorna({});
+  const questa = bozza;
+  preparaFoto(file)
+    .then((f) => {
+      if (bozza !== questa) return URL.revokeObjectURL(f.anteprima);
+      bozza.foto = f;
+    })
+    .catch((e) => {
+      console.error("foto", e);
+      toast("Non riesco a leggere questa foto. Prova con un'altra.");
+    })
+    .finally(() => {
+      if (bozza === questa) {
+        bozza.inPreparazione = false;
+        aggiorna({});
+      }
+    });
+}
+
+function liberaAnteprime() {
+  if (bozza?.foto) {
+    URL.revokeObjectURL(bozza.foto.anteprima);
+    URL.revokeObjectURL(bozza.foto.anteprimaMini);
+  }
+}
+
+function anteprima(b) {
+  if (b.inPreparazione) return html`<div class="foto grande attesa"><span>Preparo la foto…</span></div>`;
+  if (b.foto) return html`<div class="foto grande"><img src="${b.foto.anteprima}" alt="Foto della pianta"></div>`;
+  if (b.fotoAttuale && !b.fotoRimossa) {
+    const src = urlInCache(b.fotoAttuale);
+    return html`<div class="foto grande"><img data-foto="${b.fotoAttuale}" ${src ? html`src="${src}"` : ""} alt="Foto della pianta"></div>`;
+  }
+  return html`
+    <button class="foto grande vuota" type="button" data-azione="scegli-foto">
+      ${icona("camera", 30, 1.5)}<span>Aggiungi una foto</span>
+    </button>`;
+}
 
 export function render(s, { rotta }) {
   const modifica = rotta.nome === "pianta";
@@ -60,6 +112,15 @@ export function render(s, { rotta }) {
   return html`
     ${barra({ indietro: "Annulla", href, titolo: modifica ? "Modifica pianta" : "Nuova pianta" })}
     <form class="editor" id="form-pianta" novalidate>
+      <section class="editor-foto">
+        ${anteprima(b)}
+        ${b.foto || (b.fotoAttuale && !b.fotoRimossa) ? html`
+          <div class="editor-foto-azioni">
+            <button class="chip" type="button" data-azione="scegli-foto">${icona("camera", 18)}Cambia foto</button>
+            <button class="link" type="button" data-azione="togli-foto">Togli foto</button>
+          </div>` : ""}
+      </section>
+
       <label class="campo" id="campo-nome">
         <span>Nome</span>
         <input type="text" data-input="bozza" data-campo="nome" value="${b.nome}" maxlength="60"
@@ -116,8 +177,8 @@ export function render(s, { rotta }) {
 
     <div class="barra-salva">
       <button class="btn primario largo" type="button" data-azione="salva-pianta"
-        ${b.salvataggio ? html`aria-busy="true" disabled` : ""}>
-        ${b.salvataggio ? "Salvo…" : modifica ? "Salva modifiche" : "Aggiungi pianta"}
+        ${b.salvataggio || b.inPreparazione ? html`aria-busy="true" disabled` : ""}>
+        ${b.salvataggio ? "Salvo…" : b.inPreparazione ? "Preparo la foto…" : modifica ? "Salva modifiche" : "Aggiungi pianta"}
       </button>
     </div>`;
 }
@@ -147,7 +208,7 @@ const limita = (campo, n) => {
 // ───────────────────────────── azioni
 async function salva() {
   const b = bozza;
-  if (!b || b.salvataggio) return;
+  if (!b || b.salvataggio || b.inPreparazione) return;
   const manca = !b.nome.trim() ? "nome" : !b.stanza.trim() ? "stanza" : null;
   if (manca) {
     toast(manca === "nome" ? "Scrivi il nome della pianta." : "Scegli la stanza.");
@@ -171,6 +232,12 @@ async function salva() {
 }
 
 export const azioni = {
+  "togli-foto": () => {
+    liberaAnteprime();
+    bozza.foto = null;
+    bozza.fotoRimossa = Boolean(bozza.fotoAttuale);
+    aggiorna({});
+  },
   substrato: (el) => {
     bozza.substrato = el.dataset.valore;
     aggiorna({});
@@ -195,5 +262,6 @@ export const input = {
 
 /** Annulla quando si esce dal form senza salvare. */
 export function abbandona() {
+  liberaAnteprime();
   bozza = null;
 }

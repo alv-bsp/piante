@@ -1,7 +1,7 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { inOrdine } from "../stato.js";
-import { testata, vuoto, contaPiante, statoBreve, verbi, dettagli } from "./comuni.js";
+import { testata, vuoto, contaPiante, statoBreve, verbi, dettagli, miniatura } from "./comuni.js";
 
 export const titolo = "Casa";
 export const conTabbar = true;
@@ -50,6 +50,7 @@ function riga({ pianta: p, stato: st }) {
   return html`
     <li class="riga-pianta">
       <a class="riga" href="#/pianta/${p.id}">
+        ${miniatura(p)}
         <span class="riga-testo">
           <span class="riga-nome">${p.nome}</span>
           ${info ? html`<span class="riga-meta">${info}</span>` : ""}

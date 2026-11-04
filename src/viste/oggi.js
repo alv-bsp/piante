@@ -5,7 +5,7 @@ import { stagione } from "../../supabase/functions/_shared/scadenze.js";
 import { giornoLungo, quanto, traQuanto } from "../tempo.js";
 import { spiegazione } from "../notifiche.js";
 import { PIANTE_DI_PARTENZA } from "../partenza.js";
-import { testata, vuoto, azioniCura, verbi, contaPiante } from "./comuni.js";
+import { testata, vuoto, azioniCura, verbi, contaPiante, miniatura } from "./comuni.js";
 
 export const titolo = "Oggi";
 export const conTabbar = true;
@@ -37,6 +37,7 @@ export function render(s, { avviso = "" } = {}) {
       <ul class="elenco">${prossime.map(({ pianta: p, stato: st }) => html`
         <li>
           <a class="riga" href="#/pianta/${p.id}">
+            ${miniatura(p)}
             <span class="riga-testo">
               <span class="riga-nome">${p.nome}</span>
               <span class="riga-meta">${p.stanza}</span>
@@ -57,6 +58,7 @@ function carta({ pianta: p, stato: st }) {
   return html`
     <li class="carta">
       <a class="carta-testa" href="#/pianta/${p.id}">
+        ${miniatura(p)}
         <span class="riga-testo">
           <span class="carta-nome">${p.nome}</span>
           <span class="riga-meta">${p.stanza} · ${ultima}${st.ritardo ? html` · <b class="in-ritardo">${st.ritardo === 1 ? "da ieri" : `da ${st.ritardo} giorni`}</b>` : ""}</span>
