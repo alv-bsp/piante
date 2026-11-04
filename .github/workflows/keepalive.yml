@@ -1,0 +1,33 @@
+# Il progetto Supabase gratuito va in pausa dopo 7 giorni senza attività.
+# Lunedì, mercoledì e venerdì questo workflow chiama ping() sul database: al massimo 3 giorni di silenzio.
+# Usa solo la chiave publishable (ping è l'unica funzione eseguibile senza login e non legge dati).
+# Attenzione: nei repo pubblici GitHub disattiva i workflow schedulati dopo 60 giorni senza attività nel repo
+# (vedi README).
+name: Keep-alive Supabase
+
+on:
+  schedule:
+    - cron: "23 6 * * 1,3,5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Chiama ping()
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "::warning::Variables SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY non impostate, salto."
+            exit 0
+          fi
+          risposta=$(curl -fsS --retry 3 --retry-delay 10 -X POST "${SUPABASE_URL%/}/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_KEY" -H "Content-Type: application/json" -d '{}')
+          echo "Risposta: $risposta"
+          [ "$risposta" = '"pong"' ] || { echo "::error::Risposta inattesa da ping()"; exit 1; }

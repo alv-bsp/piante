@@ -1,0 +1,7 @@
+# Config minima per la Supabase CLI: serve solo a pubblicare la funzione promemoria.
+# project_id è un nome locale, non il project ref (quello si passa con --project-ref).
+project_id = "piante"
+
+[functions.promemoria]
+# L'autorizzazione la fa la funzione stessa: segreto del cron oppure token di login dell'app.
+verify_jwt = false

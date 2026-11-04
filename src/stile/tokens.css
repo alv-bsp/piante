@@ -1,0 +1,47 @@
+/* Piante · design token (gli stessi dell'Armadio, accento verde invece del corallo)
+   Regola: quello che si tocca ha un leggero rilievo, quello che si guarda è piatto.
+   Contrasti su --base: testo ≥ 4,5:1, icone e bordi ≥ 3:1 (WCAG AA). */
+:root {
+  /* colore */
+  --base: #F2F2F1;          /* gesso: sfondo e superfici, unico colore di base */
+  --sh-light: #FFFFFF;      /* ombra chiara, in alto a sinistra */
+  --sh-dark: #DADAD6;       /* ombra scura, in basso a destra: gesso scurito, volutamente tenue */
+  --photo-bg: #E6E6E4;      /* fondo dietro le foto */
+  --line: #E3E3E0;          /* filetti decorativi */
+  --ink: #1F1F1F;           /* testo e anello di focus · 14,7:1 */
+  --ink-2: #666664;         /* testo secondario e segnaposto · 5,1:1 */
+  --accent: #2F7A4B;        /* verde: pieni, icone, contatori · bianco sopra 5,2:1, su gesso 4,7:1 */
+  --accent-text: #2A6E44;   /* stesso accento per il testo piccolo · 5,5:1 */
+  --on-accent: #FFFFFF;
+  --scrim: rgba(31, 31, 31, .28);
+
+  /* elevazione, solo sui comandi. Effetto sottile: offset piccoli, ombra scura chiara */
+  --e1: 2px 2px 5px var(--sh-dark), -2px -2px 5px var(--sh-light);
+  --e2: 4px 4px 12px var(--sh-dark), -4px -4px 12px var(--sh-light);
+  --e3: 6px 6px 16px var(--sh-dark), -6px -6px 16px var(--sh-light);
+  --in1: inset 1.5px 1.5px 3px var(--sh-dark), inset -1.5px -1.5px 3px var(--sh-light);
+  --in2: inset 2px 2px 5px var(--sh-dark), inset -2px -2px 5px var(--sh-light);
+
+  /* forma */
+  --r-sm: 12px; --r-md: 16px; --r-lg: 26px; --r-pill: 999px;
+
+  /* spazio */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --gutter: 16px;
+  --touch: 44px;
+  --tabbar-h: 64px;
+  --tabbar-bottom: max(12px, env(safe-area-inset-bottom));
+
+  /* tipografia */
+  --font: "Inter", -apple-system, system-ui, sans-serif;
+  --t-xs: 13px; --t-sm: 15px; --t-md: 17px; --t-lg: 20px; --t-xl: 28px; --t-2xl: 36px;
+
+  /* movimento */
+  --dur: 160ms; --dur-long: 240ms; --ease: cubic-bezier(.2, .7, .3, 1);
+
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: 0ms; --dur-long: 0ms; }
+}
