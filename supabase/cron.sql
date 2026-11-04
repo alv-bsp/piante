@@ -1,6 +1,6 @@
 -- Piante · cron dei promemoria
--- Da eseguire una volta nel SQL Editor, DOPO aver pubblicato la funzione "promemoria" e impostato i suoi secret
--- (README, passo 4). Prima sostituisci i due valori tra < >:
+-- Da eseguire una volta nel SQL Editor. Se la funzione "promemoria" non è ancora pubblicata (README, passo 5), le
+-- chiamate falliscono finché non lo è, senza danni. Prima sostituisci i due valori tra < >:
 --   <project-ref>  la parte prima di .supabase.co nel Project URL
 --   <CRON_SECRET>  lo stesso valore dato alla funzione (lo stampa `npm run chiavi`)
 --

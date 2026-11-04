@@ -1,0 +1,76 @@
+# Pubblica la Edge Function "promemoria" e i suoi secret su Supabase, senza Supabase CLI sul Mac.
+# Parte da solo quando cambia supabase/functions/, oppure a mano da Actions → "Pubblica funzione promemoria".
+#
+# Servono, in Settings → Secrets and variables → Actions:
+#   Secrets:   SUPABASE_ACCESS_TOKEN (supabase.com/dashboard/account/tokens), VAPID_PRIVATE_KEY, CRON_SECRET
+#   Variables: SUPABASE_URL, VAPID_PUBLIC_KEY (le stesse del deploy su Pages)
+# Senza il token il job si ferma con un avviso, senza errori.
+name: Pubblica funzione promemoria
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/funzione.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funzione
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Controlla la configurazione
+        id: config
+        run: |
+          mancano=""
+          for nome in SUPABASE_ACCESS_TOKEN SUPABASE_URL VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY CRON_SECRET; do
+            [ -z "${!nome}" ] && mancano="$mancano $nome"
+          done
+          if [ -n "$mancano" ]; then
+            echo "::warning::Mancano:$mancano. Aggiungili in Settings → Secrets and variables → Actions e rilancia."
+            echo "pronto=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ref=$(echo "$SUPABASE_URL" | sed -E 's#^https://([a-z0-9]+)\.supabase\.co/?$#\1#')
+          if [ "$ref" = "$SUPABASE_URL" ]; then
+            echo "::error::SUPABASE_URL non è nella forma https://<ref>.supabase.co"
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "pronto=si" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.config.outputs.pronto == 'si'
+
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        if: steps.config.outputs.pronto == 'si'
+        with:
+          version: latest
+
+      - name: Secret della funzione
+        if: steps.config.outputs.pronto == 'si'
+        run: |
+          supabase secrets set --project-ref "${{ steps.config.outputs.ref }}" \
+            "VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY" \
+            "VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY" \
+            "CRON_SECRET=$CRON_SECRET" \
+            "VAPID_SUBJECT=https://alv-bsp.github.io/piante/"
+
+      - name: Pubblica la funzione
+        if: steps.config.outputs.pronto == 'si'
+        run: supabase functions deploy promemoria --project-ref "${{ steps.config.outputs.ref }}" --no-verify-jwt

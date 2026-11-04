@@ -44,19 +44,17 @@ Regole (in `supabase/functions/_shared/scadenze.js`, le stesse per app e notific
 1. **Supabase** (progetto dell'Armadio) → **SQL Editor** → incolla ed esegui `supabase/schema.sql`.
 2. **Chiavi**: `npm install`, poi `npm run chiavi`. Stampa `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `CRON_SECRET`.
    Non le salva da nessuna parte: tienile aperte fino al passo 5.
-3. **Funzione promemoria**, dalla cartella del progetto (`<ref>` è la parte prima di `.supabase.co` nel Project URL):
-   ```bash
-   npx supabase login
-   npx supabase functions deploy promemoria --project-ref <ref> --no-verify-jwt
-   npx supabase secrets set --project-ref <ref> \
-     VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… CRON_SECRET=… \
-     VAPID_SUBJECT=https://alv-bsp.github.io/piante/
-   ```
+3. **Token Supabase** (dal telefono, se sul Mac Supabase è bloccato): supabase.com/dashboard/account/tokens →
+   Generate new token → nome `github-piante` → copia il valore.
 4. **Cron**: apri `supabase/cron.sql`, sostituisci `<project-ref>` e `<CRON_SECRET>`, eseguilo nel SQL Editor.
    Non salvare il file con il segreto dentro: va eseguito, non committato.
-5. **GitHub → repo → Settings → Secrets and variables → Actions → Variables** (tab Variables, non Secrets):
-   - `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY`: gli stessi valori dell'Armadio
-   - `VAPID_PUBLIC_KEY`: la chiave pubblica del passo 2
+5. **GitHub → repo → Settings → Secrets and variables → Actions**:
+   - tab **Variables**: `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` (gli stessi valori dell'Armadio),
+     `VAPID_PUBLIC_KEY` (passo 2)
+   - tab **Secrets**: `SUPABASE_ACCESS_TOKEN` (passo 3), `VAPID_PRIVATE_KEY` e `CRON_SECRET` (passo 2)
+
+   Poi **Actions → Pubblica funzione promemoria → Run workflow**: pubblica la funzione e i suoi secret su Supabase
+   (`.github/workflows/funzione.yml`). Riparte da solo quando cambia `supabase/functions/`.
 6. **GitHub → Settings → Pages** → Source: **GitHub Actions**. Poi `git push` (o rilancia "Deploy su Pages").
    Quando è verde l'app è su `https://alv-bsp.github.io/piante/`.
 7. **Sull'iPhone**: apri l'indirizzo in Safari → Condividi → **Aggiungi alla schermata Home**, apri l'app da lì e accedi
@@ -89,8 +87,11 @@ npm test                     # regole delle scadenze, cifratura e firma delle no
   `x-cron-secret` (confronto a tempo costante), l'app con il token di login. Usa la chiave secret del progetto, che
   Supabase le inietta da sé e non esce mai dalla funzione. Manda richieste solo ai servizi push di Apple, Google,
   Mozilla e Microsoft.
-- La chiave privata VAPID e il `CRON_SECRET` stanno solo nei secret della funzione (e il secret anche nel Vault, per il
-  cron). La chiave pubblica VAPID non è segreta.
+- La chiave privata VAPID e il `CRON_SECRET` stanno nei Secrets di GitHub e nei secret della funzione (il segreto del
+  cron anche nel Vault). La chiave pubblica VAPID non è segreta.
+- `SUPABASE_ACCESS_TOKEN` dà accesso a tutto l'account Supabase: sta solo nei Secrets di GitHub, e il workflow parte
+  solo su push a `main` o a mano, mai dalle pull request. Si può revocare dopo il primo deploy e ricrearlo quando
+  cambia la funzione.
 - `vite.config.js` ferma la build se al posto della publishable arriva una chiave secret o service_role.
 
 ## Limiti e manutenzione
