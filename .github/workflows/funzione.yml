@@ -5,6 +5,7 @@
 #   Secrets:   SUPABASE_ACCESS_TOKEN (supabase.com/dashboard/account/tokens), VAPID_PRIVATE_KEY, CRON_SECRET
 #   Variables: SUPABASE_URL, VAPID_PUBLIC_KEY (le stesse del deploy su Pages)
 # Senza il token il job si ferma con un avviso, senza errori.
+# --yes: la CLI chiede conferma prima di cambiare il progetto remoto, e in Actions non c'è nessuno a rispondere.
 name: Pubblica funzione promemoria
 
 on:
@@ -65,7 +66,7 @@ jobs:
       - name: Secret della funzione
         if: steps.config.outputs.pronto == 'si'
         run: |
-          supabase secrets set --project-ref "${{ steps.config.outputs.ref }}" \
+          supabase secrets set --remote="${{ steps.config.outputs.ref }}" --yes \
             "VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY" \
             "VAPID_PRIVATE_KEY=$VAPID_PRIVATE_KEY" \
             "CRON_SECRET=$CRON_SECRET" \
@@ -73,4 +74,4 @@ jobs:
 
       - name: Pubblica la funzione
         if: steps.config.outputs.pronto == 'si'
-        run: supabase functions deploy promemoria --project-ref "${{ steps.config.outputs.ref }}" --no-verify-jwt
+        run: supabase functions deploy promemoria --remote="${{ steps.config.outputs.ref }}" --no-verify-jwt --yes
