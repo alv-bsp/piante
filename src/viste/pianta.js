@@ -1,8 +1,7 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { stato, aggiorna, trovaPianta, statoDi, cicliDi, concimeInAcqua } from "../stato.js";
-import { caricaStorico, annullaCure, archiviaPianta, impostaFoto } from "../dati.js";
-import { preparaFoto } from "../foto.js";
+import { caricaStorico, annullaCure, archiviaPianta } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
@@ -10,13 +9,10 @@ import { rinvio } from "../../supabase/functions/_shared/scadenze.js";
 import { barra, vuoto, azioniCura, verbi, foto, regolaCiclo, statoCicloBreve } from "./comuni.js";
 
 export const conTabbar = true;
-export const fab = () => "";
 
 const inArrivo = new Set();
 // "Bagnata un altro giorno": aperto e giorno scelto sopravvivono ai ridisegni.
 let altro = { id: null, giorno: null };
-// Foto al volo: id della pianta la cui foto si sta preparando o caricando.
-let fotoInCorso = null;
 
 export function render(s, { rotta, avviso = "" }) {
   const id = rotta.param[0];
@@ -46,9 +42,15 @@ export function render(s, { rotta, avviso = "" }) {
     })}
     ${avviso}
     <article class="scheda">
-      ${fotoScheda(p)}
-      <h1 tabindex="-1">${p.nome}</h1>
-      <p class="sotto">${[p.tipo, p.stanza].filter(Boolean).join(" · ")}</p>
+      <div class="copertina-blocco">
+        ${foto(p, "copertina")}
+        <div class="etichetta-foto">
+          <span class="riga-testo">
+            <h1 class="etichetta-nome" tabindex="-1">${p.nome}</h1>
+            <span class="riga-meta">${[p.tipo, p.stanza].filter(Boolean).join(" · ")}</span>
+          </span>
+        </div>
+      </div>
 
       ${tolta
         ? html`<p class="avviso">${icona("archive", 18)}<span>Tolta dalla casa: non compare negli elenchi e non manda promemoria.</span></p>`
@@ -75,7 +77,7 @@ export function render(s, { rotta, avviso = "" }) {
             </details>
           </section>`}
 
-      <dl class="righe">
+      <dl class="righe pannello">
         <div><dt>Stanza</dt><dd>${p.stanza}</dd></div>
         ${p.vaso ? html`<div><dt>Vaso</dt><dd>${p.vaso}</dd></div>` : ""}
         <div><dt>Substrato</dt><dd>${p.substrato === "idroponica" ? "Idroponica" : "Terra"}</dd></div>
@@ -101,47 +103,13 @@ export function render(s, { rotta, avviso = "" }) {
     </article>`;
 }
 
-function fotoScheda(p) {
-  if (fotoInCorso === p.id) return html`<div class="foto grande attesa"><span>Carico la foto…</span></div>`;
-  if (!p.foto) {
-    return html`
-      <button class="foto grande vuota" type="button" data-azione="foto-pianta" data-id="${p.id}">
-        ${icona("camera", 30, 1.5)}<span>Aggiungi una foto</span>
-      </button>`;
-  }
-  return html`
-    <div class="foto-scheda">
-      ${foto(p.foto, { classe: "grande", alt: `Foto: ${p.nome}` })}
-      <button class="icona-btn cambia-foto" type="button" data-azione="foto-pianta" data-id="${p.id}"
-        aria-label="Cambia la foto">${icona("camera", 20)}</button>
-    </div>`;
-}
-
-/** Foto scelta dal selettore (main.js) per una pianta: si salva subito, senza passare dal modulo. */
-export async function fotoVeloce(id, file) {
-  const p = trovaPianta(id);
-  if (!p || fotoInCorso) return;
-  fotoInCorso = id;
-  aggiorna({});
-  try {
-    await impostaFoto(p, await preparaFoto(file));
-    toast("Foto salvata.");
-  } catch (e) {
-    console.error("foto", e);
-    toast(navigator.onLine ? "Non sono riuscito a salvare la foto. Riprova." : "Sei offline: riprova quando c'è rete.");
-  } finally {
-    fotoInCorso = null;
-    aggiorna({});
-  }
-}
-
 function concime(p, tolta) {
   const cicli = cicliDi(p);
   if (!cicli.length) {
     return html`<p class="nota">Nessun concime impostato.${tolta ? "" : html` Aggiungilo da <a href="#/pianta/${p.id}/modifica">Modifica</a>.`}</p>`;
   }
   return html`
-    <ul class="cicli">${cicli.map(({ ciclo: c, stato: cs }) => html`
+    <ul class="cicli pannello">${cicli.map(({ ciclo: c, stato: cs }) => html`
       <li class="ciclo-riga ${cs.daFare ? "da-fare" : ""}">
         <span class="storico-icona concimata">${icona("flask", 16)}</span>
         <span class="riga-testo">
@@ -164,7 +132,7 @@ function storico(p, cure) {
   if (!cure.length) return html`<p class="nota">Niente di segnato, per ora.</p>`;
   const v = verbi(p);
   return html`
-    <ul class="storico">${cure.map((c) => html`
+    <ul class="storico pannello">${cure.map((c) => html`
       <li>
         <span class="storico-icona ${c.tipo}">${icona(iconaCura(c, v), 16)}</span>
         <span class="storico-testo">${nomeCura(c, v)}<span class="riga-meta">${quando(c.il, stato.oggi)}</span></span>

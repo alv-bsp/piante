@@ -7,7 +7,6 @@ import { sb } from "./supabase.js";
 import { stato, aggiorna, ascolta, azzeraDati, quanteDaFare } from "./stato.js";
 import { caricaTutto, aggiungiPiante } from "./dati.js";
 import { verificaNotifiche, aggiornaBadge } from "./notifiche.js";
-import { idrataFoto } from "./foto.js";
 import { PIANTE_DI_PARTENZA } from "./partenza.js";
 import { esci } from "./accesso.js";
 import { rotta, normalizza, SEZIONI } from "./router.js";
@@ -29,7 +28,6 @@ const TAB = {
   casa: { etichetta: "Casa", icona: "house" },
 };
 const app = document.getElementById("app");
-const sceltaFoto = document.getElementById("scegli-foto");
 
 function vistaPer(r) {
   if (r.nome === "nuova") return editor;
@@ -48,13 +46,14 @@ function guscio() {
     <main class="vista ${v.conTabbar ? "" : "senza-tabbar"}" id="vista">${contenuto}</main>
     ${v.conTabbar ? html`
       <div class="velo" aria-hidden="true"></div>
-      ${v.fab(stato)}
       <nav class="tabbar" aria-label="Sezioni">
         ${SEZIONI.map((nome) => html`
-          <a class="tab" href="#/${nome}" ${r.sezione === nome ? html`aria-current="page"` : ""}>
-            ${icona(TAB[nome].icona, 22)}<span>${TAB[nome].etichetta}</span>
+          <a class="tab" href="#/${nome}" aria-label="${TAB[nome].etichetta}" ${r.sezione === nome ? html`aria-current="page"` : ""}>
+            ${icona(TAB[nome].icona, 22)}
             ${nome === "oggi" && n ? html`<span class="tab-conta" aria-label="${n} piante con qualcosa da fare">${n}</span>` : ""}
           </a>`)}
+        <a class="tab" href="#/nuova" aria-label="Aggiungi una pianta">${icona("plus", 24)}</a>
+        <button class="tab" type="button" data-azione="account" aria-label="Account e promemoria">${icona("user", 22)}</button>
       </nav>` : ""}`;
 }
 
@@ -62,7 +61,6 @@ function senzaConfigurazione() {
   return html`
     <main class="accesso">
       <div class="accesso-testa">
-        ${icona("sprout", 48, 1.6)}
         <h1>Piante</h1>
         <p>Manca la configurazione di Supabase. Imposta le Variables <b>SUPABASE_URL</b> e
         <b>SUPABASE_PUBLISHABLE_KEY</b> nel repo GitHub e rilancia il deploy (in locale: <b>.env.local</b>).</p>
@@ -98,13 +96,11 @@ function disegna() {
       try { if (selezione) el.setSelectionRange(...selezione); } catch { /* campi senza selezione */ }
     }
   }
-  if (nome === "app") idrataFoto(app);
   if (nome === "app" && stato.piante) aggiornaBadge(quanteDaFare());
 }
 
 // ───────────────────────────────────────── azioni
 let caricamentoPartenza = false;
-let fotoPer = "editor"; // dove va la foto scelta: il modulo, oppure l'id della pianta (foto al volo dalla scheda)
 
 const AZIONI = {
   ...cure.azioni,
@@ -113,8 +109,6 @@ const AZIONI = {
   ...editor.azioni,
   ...account.azioni,
   account: account.apri,
-  "scegli-foto": () => { fotoPer = "editor"; sceltaFoto.click(); },
-  "foto-pianta": (el) => { fotoPer = el.dataset.id; sceltaFoto.click(); },
   "chiudi-foglio": chiudiFoglio,
   riprova: () => caricaTutto(),
   partenza: async (el) => {
@@ -163,14 +157,6 @@ document.addEventListener("change", (e) => {
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (e.target.id === "form-accesso") accesso.invia(e.target);
-});
-
-sceltaFoto.addEventListener("change", () => {
-  const file = sceltaFoto.files?.[0];
-  sceltaFoto.value = ""; // così si può scegliere di nuovo lo stesso file
-  if (!file) return;
-  if (fotoPer === "editor") editor.cambiaFoto(file);
-  else pianta.fotoVeloce(fotoPer, file);
 });
 
 let rottaPrecedente = rotta();

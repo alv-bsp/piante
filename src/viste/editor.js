@@ -5,14 +5,15 @@ import { salvaPianta } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { toast } from "../ui/avvisi.js";
 import { giornoRoma, stagione, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { preparaFoto, urlInCache } from "../foto.js";
-import { barra, vuoto } from "./comuni.js";
+import { SPECIE, GENERICA, specieDi, fotoSpecie } from "../specie.js";
+import { barra, vuoto, foto } from "./comuni.js";
 
 export const conTabbar = false;
-export const fab = () => "";
 
 // La bozza vive qui finché non la salvi o esci. I campi di testo la aggiornano senza ridisegnare.
 let bozza = null;
+// "Altra" specie scelta a mano: mostra il campo del tipo anche se il nome corrisponde a una specie nota.
+let altraSpecie = false;
 
 const nuova = () => ({
   id: null,
@@ -27,10 +28,6 @@ const nuova = () => ({
   cicli: [],           // cicli di concime: { id?, prodotto, ogni_giorni, dal_mese, al_mese, con_acqua, note }
   note: "",
   ultimaVolta: giornoRoma(),
-  foto: null,          // foto nuova preparata nel browser
-  fotoAttuale: null,   // percorso della foto già salvata
-  fotoRimossa: false,
-  inPreparazione: false,
   salvataggio: false,
 });
 
@@ -48,7 +45,6 @@ const daPianta = (p) => ({
   cicli: (stato.cicli.get(p.id) || []).map((c) => ({ ...c, note: c.note || "" })),
   note: p.note || "",
   ultimaVolta: "",
-  fotoAttuale: p.foto,
 });
 
 const LIMITI = { giorni_estate: [1, 90], giorni_inverno: [1, 120], ogni_giorni: [1, 365] };
@@ -63,50 +59,33 @@ const cicloNuovo = (b) => ({
   prodotto: "", ogni_giorni: 21, dal_mese: 3, al_mese: 9, con_acqua: !b.irrigazione_automatica, note: "",
 });
 
-/** Foto scelta dal selettore (main.js): la prepara nel browser e la mostra subito. */
-export function cambiaFoto(file) {
-  if (!bozza) bozza = nuova();
-  liberaAnteprime();
-  bozza.foto = null;
-  bozza.fotoRimossa = false;
-  bozza.inPreparazione = true;
-  aggiorna({});
-  const questa = bozza;
-  preparaFoto(file)
-    .then((f) => {
-      if (bozza !== questa) return URL.revokeObjectURL(f.anteprima);
-      bozza.foto = f;
-    })
-    .catch((e) => {
-      console.error("foto", e);
-      toast("Non riesco a leggere questa foto. Prova con un'altra.");
-    })
-    .finally(() => {
-      if (bozza === questa) {
-        bozza.inPreparazione = false;
-        aggiorna({});
-      }
-    });
-}
-
-function liberaAnteprime() {
-  if (bozza?.foto) {
-    URL.revokeObjectURL(bozza.foto.anteprima);
-    URL.revokeObjectURL(bozza.foto.anteprimaMini);
-  }
-}
-
-function anteprima(b) {
-  if (b.inPreparazione) return html`<div class="foto grande attesa"><span>Preparo la foto…</span></div>`;
-  if (b.foto) return html`<div class="foto grande"><img src="${b.foto.anteprima}" alt="Foto della pianta"></div>`;
-  if (b.fotoAttuale && !b.fotoRimossa) {
-    const src = urlInCache(b.fotoAttuale);
-    return html`<div class="foto grande"><img data-foto="${b.fotoAttuale}" ${src ? html`src="${src}"` : ""} alt="Foto della pianta"></div>`;
-  }
+/** Specie: decide la foto. Una scelta tra quelle note, oppure "Altra" con il tipo scritto a mano. */
+function sceltaSpecie(b) {
+  const attuale = specieDi(b);
+  // Pianta nuova e ancora vuota: nessuna scelta evidenziata, niente campo del tipo.
+  const altra = altraSpecie || (attuale === GENERICA && Boolean(`${b.tipo}${b.nome}`.trim()));
+  const inOrdine = [...SPECIE].sort((x, y) => x.nome.localeCompare(y.nome, "it"));
   return html`
-    <button class="foto grande vuota" type="button" data-azione="scegli-foto">
-      ${icona("camera", 30, 1.5)}<span>Aggiungi una foto</span>
-    </button>`;
+    <fieldset class="gruppo">
+      <legend>Specie</legend>
+      <div class="scelta-specie" role="radiogroup" aria-label="Specie">
+        ${inOrdine.map((sp) => html`
+          <button class="chip con-foto" type="button" role="radio" aria-checked="${String(!altra && sp === attuale)}"
+            data-azione="specie" data-valore="${sp.nome}">
+            <img src="${fotoSpecie(sp, "scelta")}" alt="" loading="lazy">${sp.nome}
+          </button>`)}
+        <button class="chip" type="button" role="radio" aria-checked="${String(altra)}" data-azione="specie" data-valore="">
+          ${icona("plus", 16)}Altra
+        </button>
+      </div>
+      ${altra ? html`
+        <label class="campo">
+          <span>Tipo <small>facoltativo</small></span>
+          <input type="text" data-input="bozza" data-campo="tipo" value="${b.tipo}" maxlength="40" list="tipi"
+            placeholder="Es. Calathea, Sansevieria" autocomplete="off" autocapitalize="words">
+          <datalist id="tipi">${tipi().map((t) => html`<option value="${t}"></option>`)}</datalist>
+        </label>` : ""}
+    </fieldset>`;
 }
 
 export function render(s, { rotta }) {
@@ -116,9 +95,13 @@ export function render(s, { rotta }) {
     if (s.piante == null) return html`${barra({ indietro: "Annulla", href: "#/casa" })}<p class="nota">Carico…</p>`;
     const p = trovaPianta(id);
     if (!p) return html`${barra({ indietro: "Casa", href: "#/casa" })}${vuoto({ icona: "sprout", titolo: "Pianta non trovata", testo: "Forse è stata eliminata." })}`;
-    if (bozza?.id !== id) bozza = daPianta(p);
+    if (bozza?.id !== id) {
+      bozza = daPianta(p);
+      altraSpecie = false;
+    }
   } else if (!bozza || bozza.id) {
     bozza = nuova();
+    altraSpecie = false;
   }
 
   const b = bozza;
@@ -126,25 +109,13 @@ export function render(s, { rotta }) {
   return html`
     ${barra({ indietro: "Annulla", href, titolo: modifica ? "Modifica pianta" : "Nuova pianta" })}
     <form class="editor" id="form-pianta" novalidate>
-      <section class="editor-foto">
-        ${anteprima(b)}
-        ${b.foto || (b.fotoAttuale && !b.fotoRimossa) ? html`
-          <div class="editor-foto-azioni">
-            <button class="chip" type="button" data-azione="scegli-foto">${icona("camera", 18)}Cambia foto</button>
-            <button class="link" type="button" data-azione="togli-foto">Togli foto</button>
-          </div>` : ""}
-      </section>
+      ${foto(b, "copertina")}
+      ${sceltaSpecie(b)}
 
       <label class="campo" id="campo-nome">
         <span>Nome</span>
         <input type="text" data-input="bozza" data-campo="nome" value="${b.nome}" maxlength="60"
           placeholder="Es. Monstera deliciosa" autocomplete="off" autocapitalize="sentences" required>
-      </label>
-      <label class="campo">
-        <span>Tipo <small>facoltativo</small></span>
-        <input type="text" data-input="bozza" data-campo="tipo" value="${b.tipo}" maxlength="40" list="tipi"
-          placeholder="Es. Monstera, Ficus, Begonia" autocomplete="off" autocapitalize="words">
-        <datalist id="tipi">${tipi().map((t) => html`<option value="${t}"></option>`)}</datalist>
       </label>
       <label class="campo" id="campo-stanza">
         <span>Stanza</span>
@@ -210,8 +181,8 @@ export function render(s, { rotta }) {
 
     <div class="barra-salva">
       <button class="btn primario largo" type="button" data-azione="salva-pianta"
-        ${b.salvataggio || b.inPreparazione ? html`aria-busy="true" disabled` : ""}>
-        ${b.salvataggio ? "Salvo…" : b.inPreparazione ? "Preparo la foto…" : modifica ? "Salva modifiche" : "Aggiungi pianta"}
+        ${b.salvataggio ? html`aria-busy="true" disabled` : ""}>
+        ${b.salvataggio ? "Salvo…" : modifica ? "Salva modifiche" : "Aggiungi pianta"}
       </button>
     </div>`;
 }
@@ -273,7 +244,7 @@ const limita = (campo, n) => {
 // ───────────────────────────── azioni
 async function salva() {
   const b = bozza;
-  if (!b || b.salvataggio || b.inPreparazione) return;
+  if (!b || b.salvataggio) return;
   const manca = !b.nome.trim() ? "nome" : !b.stanza.trim() ? "stanza" : null;
   if (manca) {
     toast(manca === "nome" ? "Scrivi il nome della pianta." : "Scegli la stanza.");
@@ -303,10 +274,16 @@ async function salva() {
 }
 
 export const azioni = {
-  "togli-foto": () => {
-    liberaAnteprime();
-    bozza.foto = null;
-    bozza.fotoRimossa = Boolean(bozza.fotoAttuale);
+  specie: (el) => {
+    const nome = el.dataset.valore;
+    if (!nome) {
+      altraSpecie = true;
+      if (SPECIE.some((sp) => sp.nome === bozza.tipo)) bozza.tipo = "";
+    } else {
+      altraSpecie = false;
+      bozza.tipo = nome;
+      if (!bozza.nome.trim()) bozza.nome = nome;
+    }
     aggiorna({});
   },
   substrato: (el) => {
@@ -367,6 +344,6 @@ export const input = {
 
 /** Annulla quando si esce dal form senza salvare. */
 export function abbandona() {
-  liberaAnteprime();
   bozza = null;
+  altraSpecie = false;
 }

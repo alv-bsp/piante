@@ -1,18 +1,18 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { quanto, traQuanto } from "../tempo.js";
-import { urlInCache } from "../foto.js";
 import { MESI } from "../../supabase/functions/_shared/scadenze.js";
+import { specieDi, fotoSpecie } from "../specie.js";
 
-/** Titolo della sezione con il pulsante Account a destra. */
-export function testata(titolo, sotto = "") {
+/** Titolo grande della sezione, con una riga piccola sopra e un'azione facoltativa a destra. */
+export function testata(titolo, sotto = "", azione = "") {
   return html`
     <header class="testata">
       <div>
-        <h1 tabindex="-1">${titolo}</h1>
         ${sotto ? html`<p class="sotto">${sotto}</p>` : ""}
+        <h1 tabindex="-1">${titolo}</h1>
       </div>
-      <button class="icona-btn" type="button" data-azione="account" aria-label="Account e promemoria">${icona("user")}</button>
+      ${azione}
     </header>`;
 }
 
@@ -20,7 +20,7 @@ export function testata(titolo, sotto = "") {
 export function barra({ indietro, href, azione = "", titolo = "" }) {
   return html`
     <header class="barra">
-      <a class="indietro" href="${href}">${icona("chevron-left", 22)}<span>${indietro}</span></a>
+      <a class="indietro" href="${href}" aria-label="${indietro}"><span class="icona-btn" aria-hidden="true">${icona("chevron-left", 20)}</span></a>
       ${titolo ? html`<h1 class="barra-titolo" tabindex="-1">${titolo}</h1>` : html`<span aria-hidden="true"></span>`}
       <div class="barra-azione">${azione}</div>
     </header>`;
@@ -119,12 +119,15 @@ export function dettagli(p, { conStanza = false } = {}) {
   return [conStanza ? p.stanza : null, tipo, p.vaso, idro(p) ? "idroponica" : null].filter(Boolean).join(" · ");
 }
 
-/** Foto della pianta: l'indirizzo firmato arriva dopo (idrataFoto), se non è già in memoria. Senza foto, un germoglio. */
-export function foto(percorso, { classe = "", alt = "" } = {}) {
-  if (!percorso) return html`<div class="foto senza ${classe}">${icona("sprout", classe.includes("mini") ? 22 : 34, 1.6)}</div>`;
-  const src = urlInCache(percorso);
-  return html`<div class="foto ${classe}"><img data-foto="${percorso}" ${src ? html`src="${src}"` : ""} alt="${alt}" decoding="async"></div>`;
+/** Foto generica della specie (vedi specie.js). formato: mini, carta, copertina. */
+export function foto(p, formato = "carta", classe = formato) {
+  const specie = specieDi(p);
+  return html`
+    <div class="foto ${classe}">
+      <img src="${fotoSpecie(specie, formato)}" alt="${specie.nome}" loading="lazy" decoding="async"
+        onerror="this.remove()">
+    </div>`;
 }
 
-/** Miniatura quadrata per gli elenchi. */
-export const miniatura = (p) => foto(p.miniatura, { classe: "mini" });
+/** Miniatura tonda per gli elenchi. */
+export const miniatura = (p) => foto(p, "mini");

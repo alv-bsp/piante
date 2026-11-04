@@ -5,16 +5,20 @@ import { stagione } from "../../supabase/functions/_shared/scadenze.js";
 import { giornoLungo, quanto, traQuanto } from "../tempo.js";
 import { spiegazione } from "../notifiche.js";
 import { PIANTE_DI_PARTENZA } from "../partenza.js";
-import { testata, vuoto, azioniCura, verbi, contaPiante, miniatura, regolaCiclo } from "./comuni.js";
+import { testata, vuoto, azioniCura, verbi, contaPiante, miniatura, foto, regolaCiclo } from "./comuni.js";
 
 export const titolo = "Oggi";
 export const conTabbar = true;
-export const fab = () => "";
 
 const PROSSIMI_GIORNI = 3;
 
+const saluto = () => {
+  const h = new Date().getHours();
+  return h < 13 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera";
+};
+
 export function render(s, { avviso = "" } = {}) {
-  const sotto = `${giornoLungo(s.oggi)} · ${stagione(s.oggi)}`;
+  const sotto = `${saluto()} · ${giornoLungo(s.oggi)}`;
   if (s.piante == null) return html`${testata(titolo, s.caricamento ? "Carico…" : sotto)}${avviso}`;
 
   const tutte = inOrdine();
@@ -33,33 +37,37 @@ export function render(s, { avviso = "" } = {}) {
     ${concime.length ? html`
       <h2 class="titoletto">Da concimare <span class="conta">${concime.length}</span></h2>
       <ul class="carte">${concime.map(cartaConcime)}</ul>` : ""}
-    ${!acqua.length && !concime.length ? tuttoAPosto(prossime[0] || tutte.find((x) => Number.isFinite(x.stato.mancano))) : ""}
+    ${!acqua.length && !concime.length ? tuttoAPosto(prossime[0] || tutte.find((x) => Number.isFinite(x.stato.mancano)), s) : ""}
     ${prossime.length ? html`
       <h2 class="titoletto">Nei prossimi giorni</h2>
-      <ul class="elenco">${prossime.map(({ pianta: p, stato: st }) => html`
-        <li>
-          <a class="riga" href="#/pianta/${p.id}">
-            ${miniatura(p)}
-            <span class="riga-testo">
-              <span class="riga-nome">${p.nome}</span>
-              <span class="riga-meta">${p.stanza}</span>
-            </span>
-            <span class="riga-quando">${traQuanto(st.mancano)}</span>
-            ${icona("chevron-right", 18)}
-          </a>
-        </li>`)}
-      </ul>` : ""}`;
+      <div class="pannello">
+        <ul class="elenco">${prossime.map(({ pianta: p, stato: st }) => html`
+          <li>
+            <a class="riga" href="#/pianta/${p.id}">
+              ${miniatura(p)}
+              <span class="riga-testo">
+                <span class="riga-nome">${p.nome}</span>
+                <span class="riga-meta">${p.stanza}</span>
+              </span>
+              <span class="riga-quando">${traQuanto(st.mancano)}</span>
+            </a>
+          </li>`)}
+        </ul>
+      </div>` : ""}`;
 }
 
+/** Foto della specie con il nome in un'etichetta di vetro e la freccia verso la scheda. */
 function testaCarta(p, meta) {
   return html`
-    <a class="carta-testa" href="#/pianta/${p.id}">
-      ${miniatura(p)}
-      <span class="riga-testo">
-        <span class="carta-nome">${p.nome}</span>
-        <span class="riga-meta">${meta}</span>
+    <a class="carta-foto" href="#/pianta/${p.id}" aria-label="Apri ${p.nome}">
+      ${foto(p, "carta")}
+      <span class="etichetta-foto">
+        <span class="riga-testo">
+          <span class="etichetta-nome">${p.nome}</span>
+          <span class="riga-meta">${meta}</span>
+        </span>
+        <span class="icona-btn accento" aria-hidden="true">${icona("arrow-up-right", 20)}</span>
       </span>
-      ${icona("chevron-right", 18)}
     </a>`;
 }
 
@@ -72,10 +80,12 @@ function cartaAcqua({ pianta: p, stato: st, concime }) {
   return html`
     <li class="carta">
       ${testaCarta(p, html`${p.stanza} · ${ultima}${st.ritardo ? html` · <b class="in-ritardo">${st.ritardo === 1 ? "da ieri" : `da ${st.ritardo} giorni`}</b>` : ""}`)}
-      <p class="carta-nota">${consiglio}</p>
-      ${concime.length ? html`
-        <p class="carta-concime">${icona("flask", 16)}<span>Nell'acqua: ${concime.map((c) => c.prodotto).join(", ")}${concime.some((c) => c.note) ? html` <span class="riga-meta">(${concime.map((c) => c.note).filter(Boolean).join("; ")})</span>` : ""}</span></p>` : ""}
-      ${azioniCura(p, { concime })}
+      <div class="carta-corpo">
+        <p class="carta-nota">${consiglio}</p>
+        ${concime.length ? html`
+          <p class="carta-concime">${icona("flask", 16)}<span>Nell'acqua: ${concime.map((c) => c.prodotto).join(", ")}${concime.some((c) => c.note) ? html` <span class="riga-meta">(${concime.map((c) => c.note).filter(Boolean).join("; ")})</span>` : ""}</span></p>` : ""}
+        ${azioniCura(p, { concime })}
+      </div>
     </li>`;
 }
 
@@ -84,9 +94,11 @@ function cartaConcime({ pianta: p, ciclo: c, stato: st }) {
   return html`
     <li class="carta">
       ${testaCarta(p, html`${p.stanza} · ${ultima}`)}
-      <p class="carta-concime forte">${icona("flask", 16)}<span><b>${c.prodotto}</b> <span class="riga-meta">${regolaCiclo(c, p)}</span></span></p>
-      ${c.note ? html`<p class="carta-nota">${c.note}</p>` : ""}
-      <button class="btn primario largo" type="button" data-azione="concimata" data-id="${p.id}" data-ciclo="${c.id}">${icona("check", 18)}Concimata</button>
+      <div class="carta-corpo">
+        <p class="carta-concime forte">${icona("flask", 16)}<span><b>${c.prodotto}</b> <span class="riga-meta">${regolaCiclo(c, p)}</span></span></p>
+        ${c.note ? html`<p class="carta-nota">${c.note}</p>` : ""}
+        <button class="btn primario largo" type="button" data-azione="concimata" data-id="${p.id}" data-ciclo="${c.id}">${icona("check", 18)}Concimata</button>
+      </div>
     </li>`;
 }
 
@@ -94,7 +106,7 @@ function tuttoAPosto(prima) {
   const prossima = prima ? `Prossimo controllo: ${prima.pianta.nome}, ${traQuanto(prima.stato.mancano)}.` : "";
   return html`
     <section class="a-posto">
-      <div class="vuoto-icona">${icona("check", 30, 2)}</div>
+      <div class="vuoto-icona">${icona("check", 30, 2.2)}</div>
       <h2>Tutto a posto</h2>
       <p>Niente da bagnare né da concimare oggi. ${prossima}</p>
     </section>`;

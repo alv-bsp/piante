@@ -1,8 +1,8 @@
 # Piante
 
 Webapp personale per le piante di casa: dove sono, quando le ho bagnate, quando controllarle.
-Un solo utente, pensata per il telefono e installabile sulla schermata Home. Sorella dell'Armadio: stesso stack,
-stesso stile, accento verde.
+Un solo utente, pensata per il telefono e installabile sulla schermata Home. Sorella dell'Armadio per lo stack;
+lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acceso, font Plus Jakarta Sans.
 
 - **Frontend**: Vite + JavaScript senza framework, pubblicato su GitHub Pages da GitHub Actions a ogni push su `main`.
 - **Backend**: lo stesso progetto Supabase dell'Armadio (piano gratuito). Tabelle con nomi diversi, stesso login.
@@ -16,11 +16,12 @@ stesso stile, accento verde.
   (per l'idroponica: **Rabboccata** e **Livello ok**). Se c'è un concime da sciogliere nell'acqua, il pulsante
   diventa **Con concime** (sotto resta "Solo acqua"). Poi **Da concimare**, con i concimi da dare a parte
   (granulare, chelato, piante con irrigazione automatica), e le piante dei prossimi tre giorni.
-- **Casa**: tutte le piante divise per stanza, con la miniatura, l'ultima annaffiatura e una goccia per segnarla al volo.
+- **Casa**: tutte le piante divise per stanza, con la foto della specie, l'ultima annaffiatura e una goccia per segnarla al volo.
   Accanto a ogni stanza con almeno due piante, **Bagna tutte**: elenco già spuntato, togli quelle saltate, conferma.
 - **Scheda**: foto, stato, "bagnata un altro giorno", dati della pianta, storico (una voce sbagliata si cancella).
-- **Foto**: una per pianta, per riconoscerla al volo. Dalla scheda, il tocco su "Aggiungi una foto" (o sulla
-  fotocamera, per cambiarla) apre fotocamera o libreria e la salva subito; si può anche scegliere nel modulo.
+- **Foto**: una foto generica per specie, scelta in `src/specie.js` e servita dal CDN di Unsplash. Nel modulo si
+  sceglie la specie tra quelle note (o "Altra", con il tipo scritto a mano); le piante già salvate la ricavano da
+  tipo e nome, quindi "Ficus", "Ficus lyrata" e "ficus lirata" danno la stessa foto.
 - Ogni azione si può annullare dal messaggio che compare in basso.
 
 Regole (in `supabase/functions/_shared/scadenze.js`, le stesse per app e notifiche):
@@ -81,8 +82,9 @@ npm test                     # regole delle scadenze, cifratura e firma delle no
 - Login solo con email e password, registrazioni chiuse (impostazioni del progetto dell'Armadio).
 - RLS attiva su tutte le tabelle: ogni riga è visibile e modificabile solo dal proprietario. Una cura è valida solo se
   la pianta è tua. Chi non ha fatto login non vede niente.
-- Bucket `piante` privato (separato da `foto` dell'Armadio), massimo 1 MB a file, solo WebP e JPEG, ogni file nella
-  cartella del proprio `user_id`. Le immagini si leggono solo con signed URL.
+- Le foto delle specie arrivano da `images.unsplash.com`: Unsplash vede le richieste delle immagini, nient'altro.
+  Il bucket `piante` e le colonne `foto`/`miniatura` dello schema restano dalla versione con le foto personali e non
+  sono più usati.
 - La funzione `promemoria` è pubblicata senza verifica JWT del gateway e si autorizza da sola: il cron con
   `x-cron-secret` (confronto a tempo costante), l'app con il token di login. Usa la chiave secret del progetto, che
   Supabase le inietta da sé e non esce mai dalla funzione. Manda richieste solo ai servizi push di Apple, Google,
@@ -98,9 +100,6 @@ npm test                     # regole delle scadenze, cifratura e firma delle no
 
 - **Pausa dopo 7 giorni di inattività** del progetto Supabase: lo tiene sveglio il keep-alive dell'Armadio, e qui c'è
   lo stesso workflow (`keepalive.yml`) come riserva. GitHub li disattiva dopo 60 giorni senza commit nel repo.
-- **Storage 1 GB**, condiviso con le foto dell'Armadio. Le foto delle piante vengono ridimensionate e compresse nel
-  browser (circa 1200 px sul lato lungo, 250 KB, più una miniatura da 30 KB): qualche migliaio di foto prima di
-  riempirlo.
 - **Notifica che non arriva**: SQL Editor →
   `select status_code, content from net._http_response order by created desc limit 5;` mostra le risposte della
   funzione. In Account, **Invia una prova** dice subito se il problema è la funzione o il dispositivo.
@@ -115,7 +114,7 @@ src/main.js                        avvio, sessione, router, azioni
 src/stato.js                       stato in memoria
 src/dati.js                        letture e scritture su Supabase
 src/notifiche.js                   permesso, iscrizione push, prova, badge
-src/foto.js                        foto ridimensionate nel browser, caricamento, signed URL (come nell'Armadio)
+src/specie.js                      specie note, regole per riconoscerle, foto Unsplash
 src/partenza.js                    le piante di partenza, con i loro cicli di concime
 src/tempo.js                       date in parole
 src/viste/                         Oggi, Casa, Bagna tutte, scheda, editor, account, accesso
@@ -143,9 +142,14 @@ test/                              node --test
   piedi. Il nome del prodotto si copia nello storico: togliere un ciclo non cancella le concimazioni fatte.
 - **Concime nell'acqua alla prossima annaffiatura**: concimare un vaso col terriccio ancora umido non ha senso, quindi
   il Compo non ti chiama da solo, si aggancia all'annaffiatura.
-- **Una foto per pianta, non una galleria**: serve a riconoscerla, non a seguirne la crescita. Una foto nuova
-  sostituisce la vecchia, che si cancella dallo storage. Stesso codice di compressione dell'Armadio.
+- **Foto per specie, non per pianta**: belle, uniformi e senza fatica. Prese da Unsplash (licenza libera, solo foto
+  non Unsplash+), scelte a mano tra quelle con una pianta sola e un fondo pulito. Restano sul loro CDN, che le ritaglia
+  alla misura giusta (`fotoSpecie()`); se un giorno una sparisce, al suo posto resta il riquadro di vetro.
+- **Nuovo stile, stessa UX**: le schermate e i flussi sono quelli di prima; cambiano colori, superfici, tipografia e la
+  barra in basso (cerchi: Oggi, Casa, Aggiungi, Account).
 
 ## Licenze
 
-Inter: SIL Open Font License 1.1 (`src/assets/OFL-Inter.txt`). Icone: Lucide, licenza ISC.
+Plus Jakarta Sans: SIL Open Font License 1.1 (`src/assets/OFL-PlusJakartaSans.txt`). Icone: Lucide, licenza ISC.
+Foto: Unsplash, licenza Unsplash (https://unsplash.com/license). Gli id delle foto sono in `src/specie.js`; ogni foto
+si apre su `https://images.unsplash.com/photo-<id>`.

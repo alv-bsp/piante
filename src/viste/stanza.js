@@ -5,7 +5,6 @@ import { icona } from "../ui/icone.js";
 import { attive, trovaPianta, statoDi } from "../stato.js";
 import { registraCure } from "../dati.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
-import { idrataFoto } from "../foto.js";
 import { miniatura, statoBreve, contaPiante } from "./comuni.js";
 import { annulla } from "./cure.js";
 
@@ -54,7 +53,6 @@ export function aggiornaConteggio() {
 export const azioni = {
   "bagna-stanza": (el) => {
     apriFoglio(render(el.dataset.stanza), "stanza");
-    idrataFoto(document.getElementById("foglio"));
   },
   "conferma-stanza": async (el) => {
     const ids = spuntate().filter((id) => trovaPianta(id));

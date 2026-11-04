@@ -44,7 +44,7 @@ export function render(s, { avviso = "" } = {}) {
               <button class="chip" type="button" data-azione="bagna-stanza" data-stanza="${stanza}">${icona("droplet", 16)}Bagna tutte</button>` : ""}
           </div>
           ${stanza === DA_SISTEMARE ? html`<p class="aiuto">Apri la pianta, tocca Modifica e scegli la stanza.</p>` : ""}
-          <ul class="elenco">${piante.map(riga)}</ul>
+          <div class="pannello"><ul class="elenco">${piante.map(riga)}</ul></div>
         </section>`;
     })}`;
 }
@@ -69,6 +69,3 @@ function riga({ pianta: p, stato: st }) {
           aria-label="${p.nome}: ${v.fatta} adesso">${icona(v.icona, 20)}</button>`}
     </li>`;
 }
-
-export const fab = () => html`
-  <a class="btn primario fab" href="#/nuova">${icona("plus")}Pianta</a>`;

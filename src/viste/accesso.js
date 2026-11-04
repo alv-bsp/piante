@@ -1,14 +1,15 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { accedi } from "../accesso.js";
+import { SPECIE, fotoSpecie } from "../specie.js";
 
 export function render() {
   return html`
     <main class="accesso">
+      <div class="foto copertina"><img src="${fotoSpecie(SPECIE[2], "copertina")}" alt="" decoding="async"></div>
       <div class="accesso-testa">
-        ${icona("sprout", 48, 1.6)}
-        <h1>Piante</h1>
-        <p>Accedi per vedere le tue piante.</p>
+        <h1>Le tue piante,<br>senza pensarci</h1>
+        <p>Quando bagnarle, quando concimarle. Accedi per iniziare.</p>
       </div>
       <form id="form-accesso" novalidate>
         <label class="campo">
@@ -20,7 +21,9 @@ export function render() {
           <input type="password" name="password" autocomplete="current-password" required>
         </label>
         <p class="errore" id="errore-accesso" role="alert" hidden></p>
-        <button class="btn primario largo" type="submit">Accedi</button>
+        <button class="btn primario largo btn-freccia" type="submit">
+          <span class="cerchio" aria-hidden="true">${icona("arrow-right", 20)}</span><span class="testo">Accedi</span>
+        </button>
       </form>
     </main>`;
 }
@@ -46,7 +49,7 @@ export async function invia(form) {
   errore.hidden = true;
   bottone.setAttribute("aria-busy", "true");
   bottone.disabled = true;
-  bottone.textContent = "Accesso in corso…";
+  bottone.querySelector(".testo").textContent = "Accesso in corso…";
   try {
     await accedi(email, password);
     // Al successo ci pensa onAuthStateChange: la pagina passa a Oggi.
@@ -54,7 +57,7 @@ export async function invia(form) {
     mostra(e.message);
     bottone.disabled = false;
     bottone.removeAttribute("aria-busy");
-    bottone.textContent = "Accedi";
+    bottone.querySelector(".testo").textContent = "Accedi";
     form.password.select();
   }
 }
