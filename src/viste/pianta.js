@@ -1,13 +1,13 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
-import { stato, aggiorna, trovaPianta, statoDi } from "../stato.js";
-import { caricaStorico, annullaCura, archiviaPianta, impostaFoto } from "../dati.js";
+import { stato, aggiorna, trovaPianta, statoDi, cicliDi, concimeInAcqua } from "../stato.js";
+import { caricaStorico, annullaCure, archiviaPianta, impostaFoto } from "../dati.js";
 import { preparaFoto } from "../foto.js";
 import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
 import { rinvio } from "../../supabase/functions/_shared/scadenze.js";
-import { barra, vuoto, azioniCura, verbi, foto } from "./comuni.js";
+import { barra, vuoto, azioniCura, verbi, foto, regolaCiclo, statoCicloBreve } from "./comuni.js";
 
 export const conTabbar = true;
 export const fab = () => "";
@@ -52,13 +52,19 @@ export function render(s, { rotta, avviso = "" }) {
 
       ${tolta
         ? html`<p class="avviso">${icona("archive", 18)}<span>Tolta dalla casa: non compare negli elenchi e non manda promemoria.</span></p>`
+        : st.automatica
+        ? html`
+          <section class="riquadro">
+            <p class="riquadro-grande">Irrigazione automatica</p>
+            <p class="riquadro-sotto">La bagna Home Assistant: qui niente promemoria per l'acqua, solo per il concime.</p>
+          </section>`
         : html`
           <section class="riquadro ${st.daControllare ? "scaduta" : ""}">
             <p class="riquadro-grande">${st.bagnata ? `${v.fatto} ${quanto(st.bagnata)}` : "Mai segnata"}</p>
             <p class="riquadro-sotto">${st.daControllare
               ? (st.ritardo === 0 ? "Da controllare oggi." : `Da controllare ${traQuanto(-st.ritardo)}.`)
               : `Prossimo controllo ${giornoBreve(st.scadenza)}, ${traQuanto(st.mancano)}.`}</p>
-            ${azioniCura(p)}
+            ${azioniCura(p, { concime: st.daControllare ? concimeInAcqua(p) : [] })}
             <details class="altro-giorno" ${altro.id === p.id ? "open" : ""}>
               <summary data-azione="altro-giorno" data-id="${p.id}">${v.fatto} un altro giorno</summary>
               <div class="altro-giorno-riga">
@@ -73,10 +79,16 @@ export function render(s, { rotta, avviso = "" }) {
         <div><dt>Stanza</dt><dd>${p.stanza}</dd></div>
         ${p.vaso ? html`<div><dt>Vaso</dt><dd>${p.vaso}</dd></div>` : ""}
         <div><dt>Substrato</dt><dd>${p.substrato === "idroponica" ? "Idroponica" : "Terra"}</dd></div>
-        <div><dt>Controllo ogni</dt><dd>${p.giorni_estate} giorni in estate, ${p.giorni_inverno} in inverno</dd></div>
-        <div><dt>Se ${v.umida.toLowerCase()}</dt><dd>ricontrollo dopo ${rinvio(st.giorni)} giorni</dd></div>
+        ${st.automatica ? "" : html`
+          <div><dt>Controllo ogni</dt><dd>${p.giorni_estate} giorni in estate, ${p.giorni_inverno} in inverno</dd></div>
+          <div><dt>Se ${v.umida.toLowerCase()}</dt><dd>ricontrollo dopo ${rinvio(st.giorni)} giorni</dd></div>`}
         ${p.note ? html`<div class="nota-lunga"><dt>Note</dt><dd>${p.note}</dd></div>` : ""}
       </dl>
+
+      <section class="sezione">
+        <h2>Concime</h2>
+        ${concime(p, tolta)}
+      </section>
 
       <section class="sezione">
         <h2>Storico</h2>
@@ -123,6 +135,30 @@ export async function fotoVeloce(id, file) {
   }
 }
 
+function concime(p, tolta) {
+  const cicli = cicliDi(p);
+  if (!cicli.length) {
+    return html`<p class="nota">Nessun concime impostato.${tolta ? "" : html` Aggiungilo da <a href="#/pianta/${p.id}/modifica">Modifica</a>.`}</p>`;
+  }
+  return html`
+    <ul class="cicli">${cicli.map(({ ciclo: c, stato: cs }) => html`
+      <li class="ciclo-riga ${cs.daFare ? "da-fare" : ""}">
+        <span class="storico-icona concimata">${icona("flask", 16)}</span>
+        <span class="riga-testo">
+          <span class="riga-nome">${c.prodotto}</span>
+          <span class="riga-meta">${regolaCiclo(c, p)}</span>
+          <span class="riga-stato ${cs.daFare ? "scaduta" : ""}">${statoCicloBreve(cs)}${cs.fatta ? ` · l'ultima volta ${quanto(cs.fatta)}` : ""}</span>
+          ${c.note ? html`<span class="riga-meta">${c.note}</span>` : ""}
+        </span>
+        ${tolta ? "" : html`
+          <button class="btn piccolo ${cs.daFare ? "primario" : ""}" type="button" data-azione="concimata" data-id="${p.id}" data-ciclo="${c.id}">Fatto</button>`}
+      </li>`)}
+    </ul>`;
+}
+
+const nomeCura = (c, v) => (c.tipo === "bagnata" ? v.fatto : c.tipo === "controllata" ? v.umida : `Concimata · ${c.prodotto}`);
+const iconaCura = (c, v) => (c.tipo === "bagnata" ? v.icona : c.tipo === "controllata" ? "clock" : "flask");
+
 function storico(p, cure) {
   if (!cure) return html`<p class="nota">Carico…</p>`;
   if (!cure.length) return html`<p class="nota">Niente di segnato, per ora.</p>`;
@@ -130,8 +166,8 @@ function storico(p, cure) {
   return html`
     <ul class="storico">${cure.map((c) => html`
       <li>
-        <span class="storico-icona ${c.tipo}">${icona(c.tipo === "bagnata" ? v.icona : "clock", 16)}</span>
-        <span class="storico-testo">${c.tipo === "bagnata" ? v.fatto : v.umida}<span class="riga-meta">${quando(c.il, stato.oggi)}</span></span>
+        <span class="storico-icona ${c.tipo}">${icona(iconaCura(c, v), 16)}</span>
+        <span class="storico-testo">${nomeCura(c, v)}<span class="riga-meta">${quando(c.il, stato.oggi)}</span></span>
         <button class="icona-btn piccola" type="button" data-azione="cancella-cura" data-cura="${c.id}" data-id="${p.id}"
           aria-label="Cancella questa voce">${icona("x", 16)}</button>
       </li>`)}
@@ -197,7 +233,7 @@ export const azioni = {
     if (!cura) return;
     el.disabled = true;
     try {
-      await annullaCura(cura);
+      await annullaCure([cura]);
       toast("Voce cancellata.");
     } catch (e) {
       console.error("cancella cura", e);

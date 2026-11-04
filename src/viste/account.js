@@ -29,7 +29,7 @@ export function render(s) {
             <option value="${h}" ${h === s.ora ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`)}
         </select>
       </label>
-      <p class="aiuto">Una notifica sola, solo se c'è almeno una pianta da controllare.</p>
+      <p class="aiuto">Una notifica sola, solo se c'è una pianta da controllare o un concime da dare.</p>
     </section>
 
     ${archivio.length ? html`

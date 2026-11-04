@@ -651,3 +651,63 @@
 .editor-foto .foto.grande { width: min(62vw, 260px); }
 .editor-foto-azioni { display: flex; align-items: center; gap: var(--s4); }
 .riga:active .foto, .carta-testa:active .foto { opacity: .85; }
+
+/* ───────── Concime ───────── */
+.riga-stato.concime { color: var(--ink-2); }
+.carta-concime { display: flex; gap: 8px; align-items: flex-start; font-size: var(--t-sm); line-height: 1.45; }
+.carta-concime svg { margin-top: 2px; color: var(--accent); }
+.carta-concime.forte { font-size: var(--t-md); }
+.carta-concime .riga-meta { display: block; }
+.solo-acqua { min-height: 32px; justify-self: center; font-size: var(--t-sm); }
+.cicli { list-style: none; border-top: 1px solid var(--line); }
+.ciclo-riga { display: flex; align-items: center; gap: var(--s3); padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ciclo-riga .riga-nome { white-space: normal; }
+.ciclo-riga .btn { flex: none; }
+.storico-icona.concimata { color: var(--accent); }
+
+/* Editor: un riquadro per ciclo */
+.cicli-editor { display: grid; gap: var(--s3); margin-bottom: var(--s3); }
+.ciclo {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s3) var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.ciclo .chip { justify-self: start; }
+.ciclo-testa { display: flex; align-items: center; gap: var(--s2); }
+.ciclo input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--base);
+  box-shadow: var(--in2);
+  font-size: var(--t-md);
+}
+.ciclo input[type="text"]::placeholder { color: var(--ink-2); }
+.ciclo .ciclo-nota { height: 40px; font-size: var(--t-sm); }
+.ciclo-mesi { display: flex; align-items: center; gap: var(--s2); color: var(--ink-2); font-size: var(--t-sm); }
+.ciclo-mesi select {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--base);
+  box-shadow: var(--e1);
+  color: var(--ink);
+  font-size: var(--t-md);
+}
+
+/* ───────── Casa: Bagna tutte ───────── */
+.stanza-testa { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.stanza-testa .chip { flex: none; min-height: 36px; margin-top: var(--s5); margin-bottom: var(--s3); padding: 0 14px; }
+.stanza-testa .chip svg { color: var(--accent); }
+.spunte { list-style: none; margin-bottom: var(--s4); border-top: 1px solid var(--line); }
+.spunte li { border-bottom: 1px solid var(--line); }
+.spunta { display: flex; align-items: center; gap: var(--s3); min-height: 64px; padding: 6px 0; cursor: pointer; }
+.spunta input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }

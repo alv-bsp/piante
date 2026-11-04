@@ -4,7 +4,7 @@ import "./stile/componenti.css";
 
 import { configurato } from "./config.js";
 import { sb } from "./supabase.js";
-import { stato, aggiorna, ascolta, azzeraDati, scadute } from "./stato.js";
+import { stato, aggiorna, ascolta, azzeraDati, quanteDaFare } from "./stato.js";
 import { caricaTutto, aggiungiPiante } from "./dati.js";
 import { verificaNotifiche, aggiornaBadge } from "./notifiche.js";
 import { idrataFoto } from "./foto.js";
@@ -20,6 +20,7 @@ import * as casa from "./viste/casa.js";
 import * as pianta from "./viste/pianta.js";
 import * as editor from "./viste/editor.js";
 import * as cure from "./viste/cure.js";
+import * as stanza from "./viste/stanza.js";
 import * as accesso from "./viste/accesso.js";
 import * as account from "./viste/account.js";
 
@@ -40,7 +41,7 @@ function vistaPer(r) {
 function guscio() {
   const r = rotta();
   const v = vistaPer(r);
-  const n = stato.piante ? scadute().length : 0;
+  const n = stato.piante ? quanteDaFare() : 0;
   document.title = n ? `(${n}) Piante` : "Piante";
   const contenuto = v.render(stato, { rotta: r, avviso: stato.errore ? avviso(stato.errore) : "" });
   return html`
@@ -52,7 +53,7 @@ function guscio() {
         ${SEZIONI.map((nome) => html`
           <a class="tab" href="#/${nome}" ${r.sezione === nome ? html`aria-current="page"` : ""}>
             ${icona(TAB[nome].icona, 22)}<span>${TAB[nome].etichetta}</span>
-            ${nome === "oggi" && n ? html`<span class="tab-conta" aria-label="${n} da controllare">${n}</span>` : ""}
+            ${nome === "oggi" && n ? html`<span class="tab-conta" aria-label="${n} piante con qualcosa da fare">${n}</span>` : ""}
           </a>`)}
       </nav>` : ""}`;
 }
@@ -98,7 +99,7 @@ function disegna() {
     }
   }
   if (nome === "app") idrataFoto(app);
-  if (nome === "app" && stato.piante) aggiornaBadge(scadute().length);
+  if (nome === "app" && stato.piante) aggiornaBadge(quanteDaFare());
 }
 
 // ───────────────────────────────────────── azioni
@@ -107,6 +108,7 @@ let fotoPer = "editor"; // dove va la foto scelta: il modulo, oppure l'id della 
 
 const AZIONI = {
   ...cure.azioni,
+  ...stanza.azioni,
   ...pianta.azioni,
   ...editor.azioni,
   ...account.azioni,
@@ -155,6 +157,7 @@ document.addEventListener("input", (e) => {
 
 document.addEventListener("change", (e) => {
   if (e.target.dataset?.azioneChange === "ora") account.cambiaOra(e.target);
+  if (e.target.dataset?.spunta) stanza.aggiornaConteggio();
 });
 
 document.addEventListener("submit", (e) => {

@@ -7,13 +7,17 @@ stesso stile, accento verde.
 - **Frontend**: Vite + JavaScript senza framework, pubblicato su GitHub Pages da GitHub Actions a ogni push su `main`.
 - **Backend**: lo stesso progetto Supabase dell'Armadio (piano gratuito). Tabelle con nomi diversi, stesso login.
 - **Promemoria**: notifiche push. Ogni ora `pg_cron` chiama la Edge Function `promemoria`; all'ora che scegli
-  nell'app (di base le 9) ti arriva una notifica sola con le piante da controllare, solo se ce ne sono.
+  nell'app (di base le 9) ti arriva una notifica sola con le piante da controllare e i concimi da dare, solo se
+  c'è qualcosa.
 
 ## Come funziona
 
 - **Oggi**: le piante da controllare, dalla più in ritardo, con due pulsanti: **Bagnata** e **Ancora umida**
-  (per l'idroponica: **Rabboccata** e **Livello ok**). Sotto, quelle dei prossimi tre giorni.
+  (per l'idroponica: **Rabboccata** e **Livello ok**). Se c'è un concime da sciogliere nell'acqua, il pulsante
+  diventa **Con concime** (sotto resta "Solo acqua"). Poi **Da concimare**, con i concimi da dare a parte
+  (granulare, chelato, piante con irrigazione automatica), e le piante dei prossimi tre giorni.
 - **Casa**: tutte le piante divise per stanza, con la miniatura, l'ultima annaffiatura e una goccia per segnarla al volo.
+  Accanto a ogni stanza con almeno due piante, **Bagna tutte**: elenco già spuntato, togli quelle saltate, conferma.
 - **Scheda**: foto, stato, "bagnata un altro giorno", dati della pianta, storico (una voce sbagliata si cancella).
 - **Foto**: una per pianta, per riconoscerla al volo. Dalla scheda, il tocco su "Aggiungi una foto" (o sulla
   fotocamera, per cambiarla) apre fotocamera o libreria e la salva subito; si può anche scegliere nel modulo.
@@ -25,6 +29,11 @@ Regole (in `supabase/functions/_shared/scadenze.js`, le stesse per app e notific
   invernale da ottobre a marzo. Si ragiona in giorni di calendario a Roma.
 - **Ancora umida** sposta il controllo di un terzo di N (almeno 2 giorni).
 - Una pianta mai segnata conta dal giorno in cui l'hai aggiunta.
+- **Concime**: ogni pianta ha zero o più cicli, uno per prodotto: ogni quanti giorni e in quali mesi (anche a
+  cavallo dell'anno). Fuori dai mesi il ciclo è a riposo. All'inizio dei mesi è subito da dare, a meno che l'ultima
+  volta sia ancora recente; un ciclo appena creato aspetta il suo intervallo. Un concime "sciolto nell'acqua" su una
+  pianta bagnata a mano non ha un promemoria suo: si dà alla prossima annaffiatura, e segnarlo segna anche l'acqua.
+- **Irrigazione automatica** (melo e limone, ci pensa Home Assistant): niente promemoria per l'acqua, solo concime.
 - **Togli dalla casa** la archivia: sparisce dagli elenchi e dai promemoria, lo storico resta.
   Da Account › Piante tolte si rimette o si elimina per sempre.
 
@@ -52,7 +61,7 @@ Regole (in `supabase/functions/_shared/scadenze.js`, le stesse per app e notific
    Quando è verde l'app è su `https://alv-bsp.github.io/piante/`.
 7. **Sull'iPhone**: apri l'indirizzo in Safari → Condividi → **Aggiungi alla schermata Home**, apri l'app da lì e accedi
    con l'account dell'Armadio. Poi:
-   - **Carica le mie piante** (le 13 di partenza, da `src/partenza.js`) e sistema le stanze da Casa;
+   - **Carica le mie piante** (le 15 di partenza, melo e limone compresi, da `src/partenza.js`) e sistema le stanze da Casa;
    - **Account → Attiva le notifiche** → **Invia una prova**.
 
 Le notifiche su iPhone arrivano solo all'app aperta dalla schermata Home, mai a Safari. Da iOS 18.4 usano il
@@ -106,10 +115,10 @@ src/stato.js                       stato in memoria
 src/dati.js                        letture e scritture su Supabase
 src/notifiche.js                   permesso, iscrizione push, prova, badge
 src/foto.js                        foto ridimensionate nel browser, caricamento, signed URL (come nell'Armadio)
-src/partenza.js                    le piante di partenza
+src/partenza.js                    le piante di partenza, con i loro cicli di concime
 src/tempo.js                       date in parole
-src/viste/                         Oggi, Casa, scheda, editor, account, accesso
-supabase/schema.sql                tabelle, vista ultime_cure, grant, RLS, bucket delle foto
+src/viste/                         Oggi, Casa, Bagna tutte, scheda, editor, account, accesso
+supabase/schema.sql                tabelle, viste ultime_cure e ultime_concimazioni, grant, RLS, bucket delle foto
 supabase/cron.sql                  pg_cron + pg_net + Vault
 supabase/functions/promemoria/     Edge Function delle notifiche
 supabase/functions/_shared/        regole delle scadenze e Web Push (WebCrypto, senza librerie)
@@ -127,6 +136,12 @@ test/                              node --test
   **Ancora umida** evita di bagnare per forza.
 - **Web Push scritto a mano** (`_shared/webpush.js`): RFC 8291 e 8292 con WebCrypto, verificato nei test e contro la
   libreria di riferimento `http_ece`. Niente dipendenze npm nella funzione oltre a supabase-js.
+- **Concime a cicli per prodotto**: una pianta di casa ne ha uno, il melo due in mesi diversi (sangue di bue
+  ad aprile e maggio, Fortigo da giugno ad agosto), il limone due negli stessi mesi (granulare tre volte l'anno e
+  chelato di ferro ogni 30 giorni). Ogni ciclo conta dalla sua ultima volta, così i due del limone non si pestano i
+  piedi. Il nome del prodotto si copia nello storico: togliere un ciclo non cancella le concimazioni fatte.
+- **Concime nell'acqua alla prossima annaffiatura**: concimare un vaso col terriccio ancora umido non ha senso, quindi
+  il Compo non ti chiama da solo, si aggancia all'annaffiatura.
 - **Una foto per pianta, non una galleria**: serve a riconoscerla, non a seguirne la crescita. Una foto nuova
   sostituisce la vecchia, che si cancella dallo storage. Stesso codice di compressione dell'Armadio.
 

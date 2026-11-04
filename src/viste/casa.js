@@ -1,12 +1,12 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
-import { inOrdine } from "../stato.js";
-import { testata, vuoto, contaPiante, statoBreve, verbi, dettagli, miniatura } from "./comuni.js";
+import { inOrdine, cicliDi } from "../stato.js";
+import { testata, vuoto, contaPiante, statoBreve, concimeBreve, verbi, dettagli, miniatura } from "./comuni.js";
 
 export const titolo = "Casa";
 export const conTabbar = true;
 
-const DA_SISTEMARE = "Da sistemare";
+export const DA_SISTEMARE = "Da sistemare";
 
 export function render(s, { avviso = "" } = {}) {
   if (s.piante == null) return html`${testata(titolo, s.caricamento ? "Carico…" : "")}${avviso}`;
@@ -35,9 +35,14 @@ export function render(s, { avviso = "" } = {}) {
     ${avviso}
     ${ordine.map((stanza) => {
       const piante = perStanza.get(stanza).sort((a, b) => a.pianta.nome.localeCompare(b.pianta.nome, "it"));
+      const aMano = piante.filter((x) => !x.pianta.irrigazione_automatica).length;
       return html`
         <section class="stanza">
-          <h2 class="titoletto">${stanza} <span class="conta neutra">${piante.length}</span></h2>
+          <div class="stanza-testa">
+            <h2 class="titoletto">${stanza} <span class="conta neutra">${piante.length}</span></h2>
+            ${aMano >= 2 && stanza !== DA_SISTEMARE ? html`
+              <button class="chip" type="button" data-azione="bagna-stanza" data-stanza="${stanza}">${icona("droplet", 16)}Bagna tutte</button>` : ""}
+          </div>
           ${stanza === DA_SISTEMARE ? html`<p class="aiuto">Apri la pianta, tocca Modifica e scegli la stanza.</p>` : ""}
           <ul class="elenco">${piante.map(riga)}</ul>
         </section>`;
@@ -47,6 +52,7 @@ export function render(s, { avviso = "" } = {}) {
 function riga({ pianta: p, stato: st }) {
   const v = verbi(p);
   const info = dettagli(p);
+  const concime = concimeBreve(p, cicliDi(p));
   return html`
     <li class="riga-pianta">
       <a class="riga" href="#/pianta/${p.id}">
@@ -55,10 +61,12 @@ function riga({ pianta: p, stato: st }) {
           <span class="riga-nome">${p.nome}</span>
           ${info ? html`<span class="riga-meta">${info}</span>` : ""}
           <span class="riga-stato ${st.daControllare ? "scaduta" : ""}">${statoBreve(p, st)}</span>
+          ${concime ? html`<span class="riga-stato concime">${concime}</span>` : ""}
         </span>
       </a>
-      <button class="icona-btn goccia" type="button" data-azione="bagnata" data-id="${p.id}"
-        aria-label="${p.nome}: ${v.fatta} adesso">${icona(v.icona, 20)}</button>
+      ${p.irrigazione_automatica ? "" : html`
+        <button class="icona-btn goccia" type="button" data-azione="bagnata" data-id="${p.id}"
+          aria-label="${p.nome}: ${v.fatta} adesso">${icona(v.icona, 20)}</button>`}
     </li>`;
 }
 

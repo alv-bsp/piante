@@ -1,4 +1,4 @@
--- Piante · schema v1
+-- Piante · schema v1 (con concime e foto)
 -- Da eseguire una volta nel SQL Editor di Supabase. Pensato per lo stesso progetto dell'Armadio (tabelle con nomi
 -- diversi, stesso login), ma funziona anche in un progetto nuovo: ping() per il keep-alive viene creata se manca.
 -- Le tabelle nuove non sono esposte alle API senza GRANT esplicito: i grant sono qui sotto.
@@ -14,6 +14,7 @@ create table public.piante (
   substrato      text not null default 'terra' check (substrato in ('terra', 'idroponica')),
   giorni_estate  smallint not null default 7  check (giorni_estate between 1 and 90),    -- aprile–settembre
   giorni_inverno smallint not null default 14 check (giorni_inverno between 1 and 120),  -- ottobre–marzo
+  irrigazione_automatica boolean not null default false,  -- la bagna Home Assistant: niente promemoria per l'acqua
   note           text check (char_length(note) <= 2000),
   foto           text,   -- percorso nel bucket: <user_id>/<pianta_id>/<versione>.<webp|jpg>
   miniatura      text,   -- stesso schema, file -mini
@@ -23,16 +24,38 @@ create table public.piante (
 );
 create index piante_user_idx on public.piante (user_id);
 
--- ─── Cure: ogni annaffiatura o controllo ────────────────────────────
+-- ─── Cicli di concime ───────────────────────────────────────────────
+-- Zero o più per pianta: un prodotto, ogni quanti giorni, in quali mesi (dal_mese > al_mese = a cavallo dell'anno).
+-- con_acqua: concime sciolto nell'acqua dell'annaffiatura, si dà alla prossima volta che la bagni.
+create table public.cicli_concime (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  pianta_id   uuid not null references public.piante (id) on delete cascade,
+  prodotto    text not null check (char_length(btrim(prodotto)) between 1 and 60),
+  ogni_giorni smallint not null check (ogni_giorni between 1 and 365),
+  dal_mese    smallint not null check (dal_mese between 1 and 12),
+  al_mese     smallint not null check (al_mese between 1 and 12),
+  con_acqua   boolean not null default false,
+  note        text check (char_length(note) <= 300),
+  creato_il   timestamptz not null default now()
+);
+create index cicli_concime_pianta_idx on public.cicli_concime (pianta_id);
+
+-- ─── Cure: ogni annaffiatura, controllo o concimazione ──────────────
 -- "controllata" = controllata e ancora umida (o livello dell'acqua a posto): sposta il promemoria di qualche giorno.
+-- "concimata" = un ciclo di concime fatto; prodotto è la copia del nome, resta anche se il ciclo viene tolto.
 create table public.cure (
   id        uuid primary key default gen_random_uuid(),
   user_id   uuid not null default auth.uid() references auth.users (id) on delete cascade,
   pianta_id uuid not null references public.piante (id) on delete cascade,
-  tipo      text not null check (tipo in ('bagnata', 'controllata')),
-  il        timestamptz not null default now()
+  tipo      text not null check (tipo in ('bagnata', 'controllata', 'concimata')),
+  ciclo_id  uuid references public.cicli_concime (id) on delete set null,
+  prodotto  text check (char_length(prodotto) <= 60),
+  il        timestamptz not null default now(),
+  check ((tipo = 'concimata') = (prodotto is not null))
 );
 create index cure_pianta_idx on public.cure (pianta_id, il desc);
+create index cure_ciclo_idx on public.cure (ciclo_id, il desc) where ciclo_id is not null;
 create index cure_user_idx on public.cure (user_id);
 
 -- Ultima annaffiatura e ultimo controllo di ogni pianta. security_invoker: valgono le RLS di chi legge.
@@ -41,7 +64,15 @@ create view public.ultime_cure with (security_invoker = true) as
          max(il) filter (where tipo = 'bagnata')     as ultima_bagnata,
          max(il) filter (where tipo = 'controllata') as ultimo_controllo
   from public.cure
+  where tipo in ('bagnata', 'controllata')
   group by pianta_id;
+
+-- Ultima concimazione di ogni ciclo.
+create view public.ultime_concimazioni with (security_invoker = true) as
+  select ciclo_id, max(il) as ultima
+  from public.cure
+  where tipo = 'concimata' and ciclo_id is not null
+  group by ciclo_id;
 
 -- ─── Promemoria: impostazioni per utente ────────────────────────────
 create table public.promemoria (
@@ -77,21 +108,25 @@ create trigger piante_modificata before update on public.piante
 
 -- ─── Permessi (grant) ───────────────────────────────────────────────
 -- Prima si toglie tutto, poi si concede il minimo. anon (chi non ha fatto login) non vede niente.
-revoke all on public.piante, public.cure, public.ultime_cure, public.promemoria, public.push_iscrizioni
-  from anon, authenticated;
-grant select, insert, update, delete on public.piante          to authenticated;
-grant select, insert, delete         on public.cure            to authenticated;
-grant select                         on public.ultime_cure     to authenticated;
+revoke all on public.piante, public.cicli_concime, public.cure, public.ultime_cure, public.ultime_concimazioni,
+  public.promemoria, public.push_iscrizioni from anon, authenticated;
+grant select, insert, update, delete on public.piante              to authenticated;
+grant select, insert, update, delete on public.cicli_concime       to authenticated;
+grant select, insert, delete         on public.cure                to authenticated;
+grant select                         on public.ultime_cure         to authenticated;
+grant select                         on public.ultime_concimazioni to authenticated;
 grant select, insert, update         on public.promemoria      to authenticated;
 grant select, insert, update, delete on public.push_iscrizioni to authenticated;
 
 -- La funzione promemoria usa la chiave secret (ruolo service_role): salta le RLS, ma i grant le servono.
-grant select                 on public.piante, public.cure, public.ultime_cure to service_role;
+grant select on public.piante, public.cicli_concime, public.cure, public.ultime_cure, public.ultime_concimazioni
+  to service_role;
 grant select, insert, update on public.promemoria                               to service_role;
 grant select, update, delete on public.push_iscrizioni                          to service_role;
 
 -- ─── Row Level Security ─────────────────────────────────────────────
 alter table public.piante          enable row level security;
+alter table public.cicli_concime   enable row level security;
 alter table public.cure            enable row level security;
 alter table public.promemoria      enable row level security;
 alter table public.push_iscrizioni enable row level security;
@@ -101,13 +136,25 @@ create policy "piante: solo le mie" on public.piante
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
--- La cura deve essere mia, e mia la pianta a cui si riferisce.
+-- Il ciclo deve essere mio, e mia la pianta.
+create policy "cicli_concime: solo i miei" on public.cicli_concime
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.piante p where p.id = pianta_id and p.user_id = (select auth.uid()))
+  );
+
+-- La cura deve essere mia, mia la pianta e, se c'è, mio il ciclo di quella pianta.
 create policy "cure: solo le mie" on public.cure
   for all to authenticated
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
     and exists (select 1 from public.piante p where p.id = pianta_id and p.user_id = (select auth.uid()))
+    and (ciclo_id is null or exists (
+      select 1 from public.cicli_concime c
+      where c.id = ciclo_id and c.pianta_id = cure.pianta_id and c.user_id = (select auth.uid())))
   );
 
 create policy "promemoria: solo il mio" on public.promemoria
