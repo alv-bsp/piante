@@ -782,8 +782,7 @@ option { background: #1a3419; color: #fff; }
 .fumetto-cuore {
   position: absolute;
   top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% - 21px);   /* centrato senza transform: così il battito (scale) resta centrato */
   display: grid;
   place-items: center;
   width: 42px;
@@ -812,6 +811,8 @@ option { background: #1a3419; color: #fff; }
   align-content: center;
   gap: 2px;
   border: 5px solid rgba(255, 255, 255, .14);
+  /* I gradienti qui sotto hanno "border-box": partono dal bordo esterno. Senza, si ripetono sotto il bordo
+     semitrasparente e fanno una riga scura in alto e una chiara in basso. */
   color: #fff;
   font-weight: 800;
   letter-spacing: -.01em;
@@ -823,14 +824,14 @@ option { background: #1a3419; color: #fff; }
   max-width: 220px;
   height: 104px;
   border-radius: 52px;
-  background: linear-gradient(180deg, #38bdf8, #0284c7);
+  background: linear-gradient(180deg, #38bdf8, #0284c7) border-box;
   box-shadow: 0 10px 0 rgba(2, 74, 120, .55), 0 18px 30px rgba(2, 132, 199, .35);
   font-size: 19px;
 }
 .tasto-grande svg { fill: #bae6fd; stroke: #e0f2fe; }
 .tasto-grande span { white-space: nowrap; line-height: 1.1; }
 .tasto-extra { font-size: 12px; font-weight: 700; line-height: 1; opacity: .85; }
-.tasto-grande.concime { background: linear-gradient(180deg, #5ef08a, #1fae55); box-shadow: 0 10px 0 rgba(10, 80, 36, .6), var(--alone); color: var(--su-accento); }
+.tasto-grande.concime { background: linear-gradient(180deg, #5ef08a, #1fae55) border-box; box-shadow: 0 10px 0 rgba(10, 80, 36, .6), var(--alone); color: var(--su-accento); }
 .tasto-grande.concime svg { fill: none; stroke: var(--su-accento); }
 .tasto-grande.vuoto-tasto { background: var(--vetro-forte); box-shadow: none; color: var(--ink-2); }
 .tasto-grande.vuoto-tasto svg { fill: none; stroke: currentColor; }
@@ -842,8 +843,8 @@ option { background: #1a3419; color: #fff; }
   font-size: 12.5px;
   white-space: nowrap;
 }
-.tasto-tondo.rimanda { background: linear-gradient(180deg, #a78bfa, #7c3aed); box-shadow: 0 7px 0 rgba(70, 30, 140, .55); }
-.tasto-tondo.foto-tasto { background: linear-gradient(180deg, #818cf8, #4f46e5); box-shadow: 0 7px 0 rgba(40, 36, 140, .55); }
+.tasto-tondo.rimanda { background: linear-gradient(180deg, #a78bfa, #7c3aed) border-box; box-shadow: 0 7px 0 rgba(70, 30, 140, .55); }
+.tasto-tondo.foto-tasto { background: linear-gradient(180deg, #818cf8, #4f46e5) border-box; box-shadow: 0 7px 0 rgba(40, 36, 140, .55); }
 .tasto-tondo.spento { visibility: hidden; }
 /* Premuti affondano, come tasti veri: l'ombra sotto si accorcia. Rilasciati rimbalzano su. */
 .tasto-grande:active { transform: translateY(7px) scale(.97); box-shadow: 0 3px 0 rgba(2, 74, 120, .55), 0 8px 16px rgba(2, 132, 199, .3); transition-duration: var(--premi); }
