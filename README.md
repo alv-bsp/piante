@@ -12,13 +12,19 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
 
 ## Come funziona
 
-- **Oggi**: le piante da controllare, dalla più in ritardo, con due pulsanti: **Bagnata** e **Ancora umida**
-  (per l'idroponica: **Rabboccata** e **Livello ok**). Se c'è un concime da sciogliere nell'acqua, il pulsante
-  diventa **Con concime** (sotto resta "Solo acqua"). Poi **Da concimare**, con i concimi da dare a parte
-  (granulare, chelato, piante con irrigazione automatica), e le piante dei prossimi tre giorni.
+- **Calendario** (prima scheda): il mese con un pallino per giorno (blu acqua, verde chiaro concime, grigio fatto).
+  Oggi è selezionato e sotto ci sono le carte di sempre: le piante da controllare, dalla più in ritardo, con
+  **Bagnata** e **Ancora umida** (idroponica: **Rabboccata** e **Livello ok**; con un concime da sciogliere
+  nell'acqua il pulsante diventa **Con concime**), poi **Da concimare**. Tocca un altro giorno: nel futuro vedi le
+  scadenze previste (si spostano se bagni prima o dopo), nel passato quello che hai fatto (ultimi due mesi).
 - **Casa**: tutte le piante divise per stanza, con la foto della specie, l'ultima annaffiatura e una goccia per segnarla al volo.
   Accanto a ogni stanza con almeno due piante, **Bagna tutte**: elenco già spuntato, togli quelle saltate, conferma.
-- **Scheda**: foto, stato, "bagnata un altro giorno", dati della pianta, storico (una voce sbagliata si cancella).
+- **Scheda**: foto della specie con la mascotte, una goccia che cambia faccia (felice, assetata, grata dopo
+  l'acqua, addormentata a riposo) e ti parla nel fumetto. Sotto, tre tasti: **Umida** (o Livello ok), il grande
+  **Bagna** (o Rabbocca, Concima) e **Foto**. Poi il **Diario**, la **stagione del concime** (12 mesi, oggi segnato),
+  i dettagli e lo storico (una voce sbagliata si cancella).
+- **Diario**: foto tue, ognuna con la sua data (anche passata) e una nota, per vedere come cresce. Le foto si
+  rimpiccioliscono sul telefono prima di partire e finiscono nel bucket privato `piante`.
 - **Foto**: una foto generica per specie, scelta in `src/specie.js` e servita dal CDN di Unsplash. Nel modulo si
   sceglie la specie tra quelle note (o "Altra", con il tipo scritto a mano); le piante già salvate la ricavano da
   tipo e nome, quindi "Ficus", "Ficus lyrata" e "ficus lirata" danno la stessa foto.
@@ -67,6 +73,13 @@ Le notifiche su iPhone arrivano solo all'app aperta dalla schermata Home, mai a 
 Declarative Web Push e non serve service worker; sui browser più vecchi o diversi c'è `public/sw.js`, che fa solo
 notifiche (niente cache).
 
+### Modifiche allo schema
+
+Le installazioni esistenti eseguono nel SQL Editor i file di `supabase/modifiche/`, in ordine di data, una volta
+sola (`schema.sql` li contiene già):
+
+- `2026-11-05-diario.sql`: tabella del diario delle foto.
+
 ## Sviluppo in locale
 
 ```bash
@@ -83,8 +96,8 @@ npm test                     # regole delle scadenze, cifratura e firma delle no
 - RLS attiva su tutte le tabelle: ogni riga è visibile e modificabile solo dal proprietario. Una cura è valida solo se
   la pianta è tua. Chi non ha fatto login non vede niente.
 - Le foto delle specie arrivano da `images.unsplash.com`: Unsplash vede le richieste delle immagini, nient'altro.
-  Il bucket `piante` e le colonne `foto`/`miniatura` dello schema restano dalla versione con le foto personali e non
-  sono più usati.
+- Le foto del diario stanno nel bucket privato `piante`, in una cartella per utente, e si vedono con URL firmati
+  a tempo. Le colonne `foto`/`miniatura` di `piante` restano dalla versione con la foto personale e non sono usate.
 - La funzione `promemoria` è pubblicata senza verifica JWT del gateway e si autorizza da sola: il cron con
   `x-cron-secret` (confronto a tempo costante), l'app con il token di login. Usa la chiave secret del progetto, che
   Supabase le inietta da sé e non esce mai dalla funzione. Manda richieste solo ai servizi push di Apple, Google,
@@ -117,7 +130,11 @@ src/notifiche.js                   permesso, iscrizione push, prova, badge
 src/specie.js                      specie note, regole per riconoscerle, foto Unsplash
 src/partenza.js                    le piante di partenza, con i loro cicli di concime
 src/tempo.js                       date in parole
-src/viste/                         Oggi, Casa, Bagna tutte, scheda, editor, account, accesso
+src/foto.js                        foto del diario: ridimensiona, carica, URL firmati
+src/calendario.js                  eventi del calendario: scadenze previste e cure fatte
+src/ui/mascotte.js                 la goccia della scheda (SVG), una faccia per umore
+src/viste/                         Calendario, Casa, Bagna tutte, scheda, editor, account, accesso
+supabase/modifiche/                migrazioni per chi ha già lo schema
 supabase/schema.sql                tabelle, viste ultime_cure e ultime_concimazioni, grant, RLS, bucket delle foto
 supabase/cron.sql                  pg_cron + pg_net + Vault
 supabase/functions/promemoria/     Edge Function delle notifiche
@@ -146,7 +163,11 @@ test/                              node --test
   non Unsplash+), scelte a mano tra quelle con una pianta sola e un fondo pulito. Restano sul loro CDN, che le ritaglia
   alla misura giusta (`fotoSpecie()`); se un giorno una sparisce, al suo posto resta il riquadro di vetro.
 - **Nuovo stile, stessa UX**: le schermate e i flussi sono quelli di prima; cambiano colori, superfici, tipografia e la
-  barra in basso (cerchi: Oggi, Casa, Aggiungi, Account).
+  barra in basso (cerchi: Calendario, Casa, Aggiungi, Account).
+- **Calendario al posto di Oggi, in una pagina sola**: oggi resta in cima e selezionato, quindi l'uso di tutti i
+  giorni non cambia. Il futuro è una previsione calcolata con le stesse regole delle notifiche, non un'agenda salvata.
+- **Mascotte invece di un'icona di stato**: dice la stessa cosa (da fare, fatto, a riposo) in un colpo d'occhio, e
+  rende la scheda meno da gestionale. È un SVG nel codice: niente immagini da caricare.
 
 ## Licenze
 

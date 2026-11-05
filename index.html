@@ -21,6 +21,8 @@
   <div id="app"></div>
   <dialog id="foglio" class="foglio" aria-labelledby="foglio-titolo"></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- Senza "capture": su iPhone propone fotocamera, libreria foto e file -->
+  <input type="file" id="scegli-foto" accept="image/*" hidden>
 
   <script type="module" src="/src/main.js"></script>
 </body>

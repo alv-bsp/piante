@@ -1,21 +1,31 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
-import { inOrdine, oggiDaFare } from "../stato.js";
-import { stagione } from "../../supabase/functions/_shared/scadenze.js";
+import { aggiorna, inOrdine, oggiDaFare } from "../stato.js";
+import { eventi, settimane } from "../calendario.js";
 import { giornoLungo, quanto, traQuanto } from "../tempo.js";
 import { spiegazione } from "../notifiche.js";
 import { PIANTE_DI_PARTENZA } from "../partenza.js";
 import { testata, vuoto, azioniCura, verbi, contaPiante, miniatura, foto, regolaCiclo } from "./comuni.js";
 
-export const titolo = "Oggi";
+export const titolo = "Calendario";
 export const conTabbar = true;
 
-const PROSSIMI_GIORNI = 3;
+const GIORNI_SETTIMANA = ["L", "M", "M", "G", "V", "S", "D"];
+const NOMI_MESI = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+// Mese mostrato e giorno scelto: restano finché non cambi pagina.
+let mese = null;   // "AAAA-MM"
+let scelto = null; // "AAAA-MM-GG"
 
 const saluto = () => {
   const h = new Date().getHours();
   return h < 13 ? "Buongiorno" : h < 18 ? "Buon pomeriggio" : "Buonasera";
 };
+
+export function abbandona() {
+  mese = null;
+  scelto = null;
+}
 
 export function render(s, { avviso = "" } = {}) {
   const sotto = `${saluto()} · ${giornoLungo(s.oggi)}`;
@@ -24,37 +34,106 @@ export function render(s, { avviso = "" } = {}) {
   const tutte = inOrdine();
   if (!tutte.length) return html`${testata(titolo, sotto)}${avviso}${benvenuto(s)}`;
 
-  const { acqua, concime } = oggiDaFare();
-  const prossime = tutte.filter((x) => x.stato.mancano > 0 && x.stato.mancano <= PROSSIMI_GIORNI);
+  mese ||= s.oggi.slice(0, 7);
+  scelto ||= s.oggi;
+  const [anno, m] = mese.split("-").map(Number);
+  const griglia = settimane(anno, m);
+  const giorniMese = griglia.flat().filter(Boolean);
+  const ev = eventi(s, giorniMese[0], giorniMese.at(-1), s.oggi);
+  const oggiDa = oggiDaFare();
 
   return html`
     ${testata(titolo, sotto)}
     ${avviso}
     ${invitoNotifiche(s)}
+    <section class="calendario pannello">
+      <div class="cal-testa">
+        <button class="icona-btn piccola" type="button" data-azione="cal-mese" data-delta="-1" aria-label="Mese prima">${icona("chevron-left", 18)}</button>
+        <h2>${NOMI_MESI[m - 1]} ${anno}</h2>
+        <button class="icona-btn piccola" type="button" data-azione="cal-mese" data-delta="1" aria-label="Mese dopo">${icona("chevron-right", 18)}</button>
+      </div>
+      <div class="cal-griglia" role="grid">
+        ${GIORNI_SETTIMANA.map((g) => html`<span class="cal-intestazione">${g}</span>`)}
+        ${griglia.flat().map((g) => {
+          if (!g) return html`<span></span>`;
+          const e = ev.get(g);
+          const oggiQui = g === s.oggi;
+          const acqua = oggiQui ? oggiDa.acqua.length : e?.acqua.length || 0;
+          const conc = oggiQui ? oggiDa.concime.length : e?.concime.length || 0;
+          const fatte = e?.fatte.length || 0;
+          return html`
+            <button class="cal-giorno ${oggiQui ? "oggi" : ""} ${g === scelto ? "scelto" : ""} ${g < s.oggi ? "passato" : ""}"
+              type="button" data-azione="cal-giorno" data-giorno="${g}" aria-label="${giornoLungo(g)}" aria-pressed="${String(g === scelto)}">
+              <span class="cal-numero">${Number(g.slice(8))}</span>
+              <span class="cal-punti">
+                ${acqua ? html`<i class="punto acqua"></i>` : ""}${conc ? html`<i class="punto concime"></i>` : ""}${fatte && !acqua && !conc ? html`<i class="punto fatto"></i>` : ""}
+              </span>
+            </button>`;
+        })}
+      </div>
+      <div class="cal-legenda"><span><i class="punto acqua"></i>Acqua</span><span><i class="punto concime"></i>Concime</span><span><i class="punto fatto"></i>Fatto</span></div>
+    </section>
+    ${scelto === s.oggi ? oggi(s, tutte, oggiDa) : giorno(s, scelto, eventi(s, scelto, scelto, s.oggi).get(scelto))}`;
+}
+
+/** Il giorno di oggi: le carte da fare, come prima. */
+function oggi(s, tutte, { acqua, concime }) {
+  return html`
     ${acqua.length ? html`
-      <h2 class="titoletto">Da controllare <span class="conta">${acqua.length}</span></h2>
+      <h2 class="titoletto">Da controllare oggi <span class="conta">${acqua.length}</span></h2>
       <ul class="carte">${acqua.map(cartaAcqua)}</ul>` : ""}
     ${concime.length ? html`
-      <h2 class="titoletto">Da concimare <span class="conta">${concime.length}</span></h2>
+      <h2 class="titoletto">Da concimare oggi <span class="conta">${concime.length}</span></h2>
       <ul class="carte">${concime.map(cartaConcime)}</ul>` : ""}
-    ${!acqua.length && !concime.length ? tuttoAPosto(prossime[0] || tutte.find((x) => Number.isFinite(x.stato.mancano)), s) : ""}
-    ${prossime.length ? html`
-      <h2 class="titoletto">Nei prossimi giorni</h2>
+    ${!acqua.length && !concime.length ? tuttoAPosto(tutte.find((x) => Number.isFinite(x.stato.mancano))) : ""}`;
+}
+
+/** Un altro giorno: cosa è previsto (futuro) o cosa hai fatto (passato). */
+function giorno(s, g, e) {
+  const futuro = g > s.oggi;
+  const righe = [];
+  if (e) {
+    for (const p of e.acqua) righe.push({ p, testo: p.substrato === "idroponica" ? "Controllo del livello" : "Controllo dell'acqua", icona: verbi(p).icona });
+    for (const { pianta: p, ciclo: c } of e.concime) righe.push({ p, testo: `Concime: ${c.prodotto}`, icona: "flask" });
+    for (const c of e.fatte) {
+      const v = verbi(c.pianta);
+      const testo = c.tipo === "bagnata" ? v.fatto : c.tipo === "controllata" ? v.umida : `Concimata · ${c.prodotto}`;
+      righe.push({ p: c.pianta, testo, icona: c.tipo === "concimata" ? "flask" : c.tipo === "bagnata" ? v.icona : "clock" });
+    }
+  }
+  return html`
+    <h2 class="titoletto">${giornoLungo(g)}</h2>
+    ${righe.length ? html`
       <div class="pannello">
-        <ul class="elenco">${prossime.map(({ pianta: p, stato: st }) => html`
+        <ul class="elenco">${righe.map((r) => html`
           <li>
-            <a class="riga" href="#/pianta/${p.id}">
-              ${miniatura(p)}
+            <a class="riga" href="#/pianta/${r.p.id}">
+              ${miniatura(r.p)}
               <span class="riga-testo">
-                <span class="riga-nome">${p.nome}</span>
-                <span class="riga-meta">${p.stanza}</span>
+                <span class="riga-nome">${r.p.nome}</span>
+                <span class="riga-meta">${r.testo}</span>
               </span>
-              <span class="riga-quando">${traQuanto(st.mancano)}</span>
+              <span class="storico-icona ${r.icona === "flask" ? "concimata" : "bagnata"}">${icona(r.icona, 16)}</span>
             </a>
           </li>`)}
         </ul>
-      </div>` : ""}`;
+      </div>
+      ${futuro ? html`<p class="nota">Previsioni: si spostano se bagni o concimi prima o dopo.</p>` : ""}` : html`
+      <p class="nota">${futuro ? "Niente in programma." : "Niente di segnato."}</p>`}`;
 }
+
+export const azioni = {
+  "cal-mese": (el) => {
+    const [a, m] = mese.split("-").map(Number);
+    const d = new Date(Date.UTC(a, m - 1 + Number(el.dataset.delta), 1));
+    mese = d.toISOString().slice(0, 7);
+    aggiorna({});
+  },
+  "cal-giorno": (el) => {
+    scelto = el.dataset.giorno;
+    aggiorna({});
+  },
+};
 
 /** Foto della specie con il nome in un'etichetta di vetro e la freccia verso la scheda. */
 function testaCarta(p, meta) {

@@ -7,6 +7,7 @@ import { sb } from "./supabase.js";
 import { stato, aggiorna, ascolta, azzeraDati, quanteDaFare } from "./stato.js";
 import { caricaTutto, aggiungiPiante } from "./dati.js";
 import { verificaNotifiche, aggiornaBadge } from "./notifiche.js";
+import { idrataFoto } from "./foto.js";
 import { PIANTE_DI_PARTENZA } from "./partenza.js";
 import { esci } from "./accesso.js";
 import { rotta, normalizza, SEZIONI } from "./router.js";
@@ -24,10 +25,12 @@ import * as accesso from "./viste/accesso.js";
 import * as account from "./viste/account.js";
 
 const TAB = {
-  oggi: { etichetta: "Oggi", icona: "droplet" },
+  oggi: { etichetta: "Calendario", icona: "calendar" },
   casa: { etichetta: "Casa", icona: "house" },
 };
 const app = document.getElementById("app");
+const sceltaFoto = document.getElementById("scegli-foto");
+let fotoPer = null; // id della pianta a cui va la foto del diario
 
 function vistaPer(r) {
   if (r.nome === "nuova") return editor;
@@ -96,6 +99,7 @@ function disegna() {
       try { if (selezione) el.setSelectionRange(...selezione); } catch { /* campi senza selezione */ }
     }
   }
+  if (nome === "app") idrataFoto(app);
   if (nome === "app" && stato.piante) aggiornaBadge(quanteDaFare());
 }
 
@@ -104,12 +108,14 @@ let caricamentoPartenza = false;
 
 const AZIONI = {
   ...cure.azioni,
+  ...oggi.azioni,
   ...stanza.azioni,
   ...pianta.azioni,
   ...editor.azioni,
   ...account.azioni,
   account: account.apri,
   "chiudi-foglio": chiudiFoglio,
+  "diario-scegli": (el) => { fotoPer = el.dataset.id; sceltaFoto.click(); },
   riprova: () => caricaTutto(),
   partenza: async (el) => {
     if (caricamentoPartenza || stato.piante?.length) return;
@@ -157,6 +163,12 @@ document.addEventListener("change", (e) => {
 document.addEventListener("submit", (e) => {
   e.preventDefault();
   if (e.target.id === "form-accesso") accesso.invia(e.target);
+});
+
+sceltaFoto.addEventListener("change", () => {
+  const file = sceltaFoto.files?.[0];
+  sceltaFoto.value = ""; // così si può scegliere di nuovo lo stesso file
+  if (file && fotoPer) pianta.fotoScelta(fotoPer, file);
 });
 
 let rottaPrecedente = rotta();

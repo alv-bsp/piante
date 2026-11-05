@@ -680,3 +680,195 @@
 
 /* ───────── Opzioni in un select nativo (iOS le mostra comunque native, Chrome no) ───────── */
 option { background: #1a3419; color: #fff; }
+
+/* ───────── Scheda della pianta: ritratto, mascotte, fumetto ───────── */
+.scheda-testa { display: flex; justify-content: space-between; align-items: center; min-height: 56px; }
+.scheda-titolo { text-align: center; margin: -8px 0 var(--s4); }
+.scheda-titolo h1 { font-size: 34px; line-height: 1.1; font-weight: 800; letter-spacing: -.035em; }
+.scheda-titolo .specie {
+  margin-top: 6px;
+  color: var(--accento-chiaro);
+  font-size: var(--t-xs);
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ritratto { position: relative; width: min(82%, 340px); margin: 0 auto 88px; }
+.ritratto-cornice {
+  padding: 5px;
+  border-radius: 46px;
+  background: linear-gradient(135deg, #d6f7a0, var(--accento) 55%, #1fbf8f);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .35), 0 0 40px rgba(63, 224, 111, .25);
+}
+.ritratto-foto { width: 100%; aspect-ratio: 1; border-radius: 41px; }
+.ritratto-mascotte { position: absolute; left: 50%; bottom: -62px; transform: translateX(-50%); }
+.mascotte { overflow: visible; }
+.mascotte .m-corpo { transform-origin: 60px 110px; animation: m-respira 3.2s ease-in-out infinite; }
+.m-sete .m-corpo { animation: m-ondeggia 1.6s ease-in-out infinite; }
+.m-grata .m-corpo { animation: m-salta .9s var(--ease) 2, m-respira 3.2s ease-in-out 1.8s infinite; }
+.m-dorme .m-corpo { animation: m-respira 4.8s ease-in-out infinite; }
+.m-goccia { animation: m-suda 1.6s ease-in infinite; }
+.m-zeta { animation: m-zz 2.6s ease-in-out infinite; }
+@keyframes m-respira { 50% { transform: translateY(-4px) scale(1.02, .98); } }
+@keyframes m-ondeggia { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+@keyframes m-salta { 40% { transform: translateY(-16px) scale(.96, 1.06); } 70% { transform: translateY(0) scale(1.06, .94); } }
+@keyframes m-suda { from { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(10px); opacity: 0; } }
+@keyframes m-zz { 50% { transform: translate(3px, -4px); opacity: .5; } }
+
+.fumetto {
+  position: relative;
+  margin: 0 var(--s2) var(--s5);
+  padding: 30px 20px 18px;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: 34px;
+  background: var(--vetro);
+  text-align: center;
+}
+.fumetto-cuore {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  color: #1fbf8f;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+}
+.fumetto-cuore svg { fill: currentColor; }
+.fumetto-titolo { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.fumetto-testo { margin-top: 4px; color: var(--ink-2); }
+
+/* ───────── Tasti giocosi ───────── */
+.tastiera { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: var(--s2); }
+.tasto-grande, .tasto-tondo {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border: 5px solid rgba(255, 255, 255, .14);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  transition: transform var(--dur) var(--ease);
+}
+.tasto-grande:active, .tasto-tondo:active { transform: scale(.93); }
+.tasto-grande {
+  flex: 1;
+  max-width: 220px;
+  height: 104px;
+  border-radius: 52px;
+  background: linear-gradient(180deg, #38bdf8, #0284c7);
+  box-shadow: 0 10px 0 rgba(2, 74, 120, .55), 0 18px 30px rgba(2, 132, 199, .35);
+  font-size: 19px;
+}
+.tasto-grande svg { fill: #bae6fd; stroke: #e0f2fe; }
+.tasto-grande span { white-space: nowrap; line-height: 1.1; }
+.tasto-extra { font-size: 12px; font-weight: 700; line-height: 1; opacity: .85; }
+.tasto-grande.concime { background: linear-gradient(180deg, #5ef08a, #1fae55); box-shadow: 0 10px 0 rgba(10, 80, 36, .6), var(--alone); color: var(--su-accento); }
+.tasto-grande.concime svg { fill: none; stroke: var(--su-accento); }
+.tasto-grande.vuoto-tasto { background: var(--vetro-forte); box-shadow: none; color: var(--ink-2); }
+.tasto-grande.vuoto-tasto svg { fill: none; stroke: currentColor; }
+.tasto-tondo {
+  flex: none;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.tasto-tondo.rimanda { background: linear-gradient(180deg, #a78bfa, #7c3aed); box-shadow: 0 7px 0 rgba(70, 30, 140, .55); }
+.tasto-tondo.foto-tasto { background: linear-gradient(180deg, #818cf8, #4f46e5); box-shadow: 0 7px 0 rgba(40, 36, 140, .55); }
+.tasto-tondo.spento { visibility: hidden; }
+.zz { font-size: 24px; line-height: 1; font-weight: 900; color: #fbcfe8; }
+.zz small { font-size: 13px; vertical-align: super; }
+.scheda .solo-acqua { display: block; margin: var(--s2) auto 0; }
+.scheda .altro-giorno { text-align: center; margin-bottom: var(--s3); }
+.scheda .altro-giorno-riga { justify-content: center; }
+
+/* ───────── Diario di crescita ───────── */
+.diario { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.diario-voce, .diario-nuova {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: var(--r-md);
+  background: var(--vetro);
+  color: var(--ink);
+}
+.diario-voce img { width: 100%; height: 100%; object-fit: cover; }
+.diario-data {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(10, 24, 12, .7);
+  font-size: 11px;
+  font-weight: 700;
+}
+.diario-nuova { display: grid; place-content: center; justify-items: center; gap: 4px; border-style: dashed; font-size: var(--t-xs); font-weight: 700; color: var(--accento-chiaro); }
+.diario-anteprima { width: 100%; max-height: 52dvh; object-fit: contain; margin-bottom: var(--s4); border-radius: var(--r-md); background: rgba(0, 0, 0, .2); }
+.foglio .campo { margin-bottom: var(--s3); }
+
+/* ───────── Stagione del concime ───────── */
+.cicli { display: grid; gap: var(--s3); }
+.ciclo-scheda { padding: 6px 16px 16px; }
+.stagione-titolo { margin: 4px 0 8px; text-align: center; color: var(--accento-chiaro); font-size: var(--t-sm); font-weight: 700; }
+.stagione-barra { position: relative; display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; height: 26px; }
+.stagione-mese { background: rgba(255, 255, 255, .1); }
+.stagione-mese:first-child { border-radius: 13px 0 0 13px; }
+.stagione-mese:nth-child(12) { border-radius: 0 13px 13px 0; }
+.stagione-mese.attivo { background: #c9f59a; }
+.stagione-mese.attivo.passato { background: repeating-linear-gradient(135deg, #c9f59a 0 7px, #8fdc6a 7px 14px); }
+.stagione-oggi {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(10, 38, 17, .6);
+}
+.stagione-etichette { display: grid; grid-template-columns: repeat(6, 1fr); margin-top: 6px; color: var(--ink-3); font-size: 11px; font-weight: 700; }
+.ciclo-frase { margin-top: var(--s3); color: var(--ink-2); font-size: var(--t-sm); }
+.ciclo-frase b { color: var(--ink); }
+
+/* ───────── Calendario ───────── */
+.calendario { padding: 12px 10px 14px; margin-bottom: var(--s2); }
+.cal-testa { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px; }
+.cal-testa h2 { font-size: var(--t-lg); font-weight: 800; letter-spacing: -.02em; }
+.cal-griglia { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-intestazione { padding: 4px 0; text-align: center; color: var(--ink-3); font-size: 12px; font-weight: 700; }
+.cal-giorno {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.cal-giorno.passato { color: var(--ink-3); }
+.cal-giorno.oggi { box-shadow: inset 0 0 0 2px var(--accento); }
+.cal-giorno.scelto { background: var(--accento); color: var(--su-accento); box-shadow: var(--alone); }
+.cal-punti { display: flex; gap: 3px; height: 6px; }
+.punto { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.punto.acqua { background: #38bdf8; }
+.punto.concime { background: #c9f59a; }
+.punto.fatto { background: rgba(255, 255, 255, .45); }
+.cal-giorno.scelto .punto.acqua { background: #075985; }
+.cal-giorno.scelto .punto.concime, .cal-giorno.scelto .punto.fatto { background: var(--su-accento); }
+.cal-legenda { display: flex; justify-content: center; gap: 16px; margin-top: 10px; color: var(--ink-3); font-size: 12px; font-weight: 600; }
+.cal-legenda span { display: inline-flex; align-items: center; gap: 6px; }

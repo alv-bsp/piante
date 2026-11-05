@@ -1,5 +1,7 @@
 import { sb } from "./supabase.js";
 import { stato, aggiorna } from "./stato.js";
+import { caricaFoto, rimuoviFoto } from "./foto.js";
+import { aggiungiGiorni, giornoRoma } from "../supabase/functions/_shared/scadenze.js";
 
 const CAMPI_PIANTA = "id, nome, tipo, stanza, vaso, substrato, giorni_estate, giorni_inverno, irrigazione_automatica, note, archiviata_il, creata_il, modificata_il";
 const CAMPI_CICLO = "id, pianta_id, prodotto, ogni_giorni, dal_mese, al_mese, con_acqua, note, creato_il";
@@ -19,12 +21,14 @@ function perPianta(cicli) {
  */
 export async function caricaTutto() {
   aggiorna({ caricamento: true, errore: null });
-  const [piante, ultime, cicli, concimazioni, promemoria] = await Promise.all([
+  const da = new Date(`${aggiungiGiorni(giornoRoma(), -62)}T00:00:00Z`).toISOString();
+  const [piante, ultime, cicli, concimazioni, promemoria, recenti] = await Promise.all([
     sb.from("piante").select(CAMPI_PIANTA).order("nome"),
     sb.from("ultime_cure").select("pianta_id, ultima_bagnata, ultimo_controllo"),
     sb.from("cicli_concime").select(CAMPI_CICLO),
     sb.from("ultime_concimazioni").select("ciclo_id, ultima"),
     sb.from("promemoria").select("ora").maybeSingle(),
+    sb.from("cure").select(CAMPI_CURA).gte("il", da).order("il", { ascending: false }).limit(1000),
   ]);
   const risposte = [piante, ultime, cicli, concimazioni, promemoria];
   const primoErrore = risposte.find((r) => r.error)?.error;
@@ -45,6 +49,7 @@ export async function caricaTutto() {
     cicli: cicli.error ? stato.cicli : perPianta(cicli.data),
     ultimeConcime: concimazioni.error ? stato.ultimeConcime : new Map(concimazioni.data.map((u) => [u.ciclo_id, u.ultima])),
     ora: promemoria.data?.ora ?? stato.ora,
+    cureRecenti: recenti.error ? stato.cureRecenti : recenti.data,
   });
 }
 
@@ -182,7 +187,7 @@ export async function registraCure(righe) {
     }
     if (storico.has(c.pianta_id)) storico.set(c.pianta_id, [c, ...storico.get(c.pianta_id)].sort((a, b) => ms(b.il) - ms(a.il)));
   }
-  aggiorna({ ultime, ultimeConcime, storico });
+  aggiorna({ ultime, ultimeConcime, storico, cureRecenti: [...data, ...stato.cureRecenti] });
   return data;
 }
 
@@ -220,7 +225,7 @@ export async function annullaCure(cure) {
   const tolte = new Set(cure.map((c) => c.id));
   const storico = new Map(stato.storico);
   for (const id of piante) if (storico.has(id)) storico.set(id, storico.get(id).filter((c) => !tolte.has(c.id)));
-  aggiorna({ ultime, ultimeConcime, storico });
+  aggiorna({ ultime, ultimeConcime, storico, cureRecenti: stato.cureRecenti.filter((c) => !tolte.has(c.id)) });
 }
 
 /** Ultime 40 cure di una pianta, per la scheda. */
@@ -233,6 +238,40 @@ export async function caricaStorico(piantaId) {
     .limit(40);
   if (error) throw error;
   aggiorna({ storico: new Map(stato.storico).set(piantaId, data) });
+}
+
+// ───────────────────────────── diario di crescita
+
+const CAMPI_DIARIO = "id, pianta_id, giorno, foto, miniatura, nota, creata_il";
+
+export async function caricaDiario(piantaId) {
+  const { data, error } = await sb.from("diario").select(CAMPI_DIARIO).eq("pianta_id", piantaId)
+    .order("giorno", { ascending: false }).order("creata_il", { ascending: false });
+  if (error) throw error;
+  aggiorna({ diario: new Map(stato.diario).set(piantaId, data) });
+}
+
+/** Carica la foto già preparata (foto.js) e la aggiunge al diario della pianta, con il suo giorno. */
+export async function aggiungiAlDiario(pianta, foto, giorno, nota = "") {
+  const percorsi = await caricaFoto(stato.sessione.user.id, pianta.id, foto);
+  const { data, error } = await sb.from("diario")
+    .insert({ pianta_id: pianta.id, giorno, nota: nota.trim() || null, ...percorsi })
+    .select(CAMPI_DIARIO).single();
+  if (error) {
+    await rimuoviFoto([percorsi.foto, percorsi.miniatura]);
+    throw error;
+  }
+  const voci = [data, ...(stato.diario.get(pianta.id) || [])].sort((a, b) => (a.giorno < b.giorno ? 1 : a.giorno > b.giorno ? -1 : 0));
+  aggiorna({ diario: new Map(stato.diario).set(pianta.id, voci) });
+  return data;
+}
+
+export async function eliminaDalDiario(voce) {
+  const { error } = await sb.from("diario").delete().eq("id", voce.id);
+  if (error) throw error;
+  const voci = (stato.diario.get(voce.pianta_id) || []).filter((v) => v.id !== voce.id);
+  aggiorna({ diario: new Map(stato.diario).set(voce.pianta_id, voci) });
+  rimuoviFoto([voce.foto, voce.miniatura]);
 }
 
 // ───────────────────────────── promemoria
