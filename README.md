@@ -141,6 +141,7 @@ supabase/cron.sql                  pg_cron + pg_net + Vault
 supabase/functions/promemoria/     Edge Function delle notifiche
 supabase/functions/_shared/        regole delle scadenze e Web Push (WebCrypto, senza librerie)
 scripts/chiavi.mjs                 chiavi VAPID e segreto del cron
+scripts/icona/                     la goccia dell'icona (SVG) e lo script che fa i PNG in public/icons/
 test/                              node --test
 ```
 

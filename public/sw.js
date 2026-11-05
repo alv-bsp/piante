@@ -18,7 +18,7 @@ self.addEventListener("push", (evento) => {
         lang: n.lang || "it-IT",
         tag: "promemoria-piante",
         data: { url: n.navigate || self.registration.scope },
-        icon: "icons/icon-192.png",
+        icon: "icons/goccia-192.png",
       }),
       Number.isInteger(badge) && self.navigator.setAppBadge ? self.navigator.setAppBadge(badge).catch(() => {}) : null,
     ]),
