@@ -21,21 +21,27 @@ const extra = {
   dorme: '<g class="m-zeta" fill="#e6ffd6" font-family="Jakarta, sans-serif" font-weight="800"><text x="92" y="34" font-size="14">z</text><text x="102" y="22" font-size="10">z</text></g>',
 };
 
-export function mascotte(umore = "felice", dimensione = 120) {
+/**
+ * `salta`: festeggia (l'umore è appena cambiato, es. l'hai appena bagnata).
+ * Gli occhi aperti sbattono ogni tanto; la goccia si coccola con un tocco (vedi pianta.js).
+ */
+export function mascotte(umore = "felice", dimensione = 120, { salta = false } = {}) {
   return raw(`
-    <svg class="mascotte m-${umore}" width="${dimensione}" height="${dimensione}" viewBox="0 0 120 120" role="img"
-      aria-label="Mascotte ${umore}">
+    <svg class="mascotte m-${umore}${salta ? " m-festa" : ""}" width="${dimensione}" height="${dimensione}"
+      viewBox="0 0 120 120" aria-hidden="true">
       <defs>
         <radialGradient id="m-corpo" cx="38%" cy="30%" r="75%">
           <stop offset="0" stop-color="#f1ffd0"/><stop offset=".45" stop-color="#b8f27a"/><stop offset="1" stop-color="#3fd673"/>
         </radialGradient>
       </defs>
       <ellipse class="m-ombra" cx="60" cy="114" rx="26" ry="4.5" fill="rgba(0,0,0,.28)"/>
-      <g class="m-corpo">
-        <path d="M60 8c10 14 40 34 40 62a40 40 0 0 1-80 0C20 42 50 22 60 8z" fill="url(#m-corpo)"/>
-        <ellipse cx="44" cy="40" rx="9" ry="5" fill="#fff" opacity=".55" transform="rotate(-35 44 40)"/>
-        <g fill="#14321a" stroke="#14321a">${occhi[umore]}${bocca[umore]}</g>
-        ${extra[umore]}
+      <g class="m-salto">
+        <g class="m-corpo">
+          <path d="M60 8c10 14 40 34 40 62a40 40 0 0 1-80 0C20 42 50 22 60 8z" fill="url(#m-corpo)"/>
+          <ellipse cx="44" cy="40" rx="9" ry="5" fill="#fff" opacity=".55" transform="rotate(-35 44 40)"/>
+          <g fill="#14321a" stroke="#14321a"><g class="m-occhi">${occhi[umore]}</g>${bocca[umore]}</g>
+          ${extra[umore]}
+        </g>
       </g>
     </svg>`);
 }

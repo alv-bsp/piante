@@ -133,6 +133,7 @@ src/tempo.js                       date in parole
 src/foto.js                        foto del diario: ridimensiona, carica, URL firmati
 src/calendario.js                  eventi del calendario: scadenze previste e cure fatte
 src/ui/mascotte.js                 la goccia della scheda (SVG), una faccia per umore
+src/ui/effetti.js                  micro interazioni: vibrazione, schizzi, cuori, coriandoli, cambio pagina
 src/viste/                         Calendario, Casa, Bagna tutte, scheda, editor, account, accesso
 supabase/modifiche/                migrazioni per chi ha già lo schema
 supabase/schema.sql                tabelle, viste ultime_cure e ultime_concimazioni, grant, RLS, bucket delle foto
@@ -168,6 +169,11 @@ test/                              node --test
   giorni non cambia. Il futuro è una previsione calcolata con le stesse regole delle notifiche, non un'agenda salvata.
 - **Mascotte invece di un'icona di stato**: dice la stessa cosa (da fare, fatto, a riposo) in un colpo d'occhio, e
   rende la scheda meno da gestionale. È un SVG nel codice: niente immagini da caricare.
+- **Micro interazioni senza librerie**: CSS e Web Animations API. Ogni tocco risponde subito (pressione immediata,
+  rilascio con un rimbalzo, schizzi d'acqua, vibrazione) senza aspettare Supabase; se il salvataggio fallisce, la
+  carta che se ne stava andando torna al suo posto. Il cambio pagina usa le View Transitions (Safari 18+): la foto
+  vola dall'elenco al ritratto. La vibrazione su iPhone passa da un interruttore nativo invisibile, perché Safari non
+  ha la Vibration API. Con "Riduci movimento" attivo resta tutto fermo.
 
 ## Licenze
 

@@ -14,6 +14,8 @@ import { rotta, normalizza, SEZIONI } from "./router.js";
 import { html } from "./ui/html.js";
 import { icona } from "./ui/icone.js";
 import { toast, chiudiFoglio, preparaFoglio } from "./ui/avvisi.js";
+import { transizione } from "./ui/effetti.js";
+import { specieDi, fotoSpecie } from "./specie.js";
 import { avviso } from "./viste/comuni.js";
 import * as oggi from "./viste/oggi.js";
 import * as casa from "./viste/casa.js";
@@ -38,6 +40,25 @@ function vistaPer(r) {
   return { oggi, casa }[r.nome];
 }
 
+/** Profondità della pagina: sezioni 0, scheda 1, modifica e nuova 2. Decide se la transizione va avanti o indietro. */
+const profondita = (r) => (r.nome === "pianta" ? (r.param[1] === "modifica" ? 2 : 1) : r.nome === "nuova" ? 2 : 0);
+
+// Entrata della pagina: i blocchi salgono a cascata per ~700 ms dopo un cambio pagina o il primo caricamento.
+// Se nel frattempo la pagina si ridisegna (arrivano lo storico o il diario), --gia fa ripartire le animazioni
+// da dove erano, invece che da capo.
+// Il verso dipende da dove vai: "avanti" entra da destra, "indietro" da sinistra, "su" (tab e primo caricamento) dal basso.
+const ENTRATA_MS = 700;
+let entrataDa = -Infinity;
+let versoEntrata = "su";
+const segnaEntrata = (verso = "su") => {
+  entrataDa = performance.now();
+  versoEntrata = verso;
+};
+
+// Contatore sulla tab e sezione attiva: animati solo quando cambiano.
+let ultimoConta = null;
+let ultimaSezione = null;
+
 // ───────────────────────────────────────── disegno
 function guscio() {
   const r = rotta();
@@ -45,15 +66,19 @@ function guscio() {
   const n = stato.piante ? quanteDaFare() : 0;
   document.title = n ? `(${n}) Piante` : "Piante";
   const contenuto = v.render(stato, { rotta: r, avviso: stato.errore ? avviso(stato.errore) : "" });
+  const salta = stato.piante && ultimoConta !== null && n !== ultimoConta;
+  if (stato.piante) ultimoConta = n;
+  const nuovaSezione = ultimaSezione !== null && r.sezione !== ultimaSezione;
+  ultimaSezione = r.sezione;
   return html`
     <main class="vista ${v.conTabbar ? "" : "senza-tabbar"}" id="vista">${contenuto}</main>
     ${v.conTabbar ? html`
       <div class="velo" aria-hidden="true"></div>
       <nav class="tabbar" aria-label="Sezioni">
         ${SEZIONI.map((nome) => html`
-          <a class="tab" href="#/${nome}" aria-label="${TAB[nome].etichetta}" ${r.sezione === nome ? html`aria-current="page"` : ""}>
+          <a class="tab ${r.sezione === nome && nuovaSezione ? "appena" : ""}" href="#/${nome}" aria-label="${TAB[nome].etichetta}" ${r.sezione === nome ? html`aria-current="page"` : ""}>
             ${icona(TAB[nome].icona, 22)}
-            ${nome === "oggi" && n ? html`<span class="tab-conta" aria-label="${n} piante con qualcosa da fare">${n}</span>` : ""}
+            ${nome === "oggi" && n ? html`<span class="tab-conta ${salta ? "salta" : ""}" aria-label="${n} piante con qualcosa da fare">${n}</span>` : ""}
           </a>`)}
         <a class="tab" href="#/nuova" aria-label="Aggiungi una pianta">${icona("plus", 24)}</a>
         <button class="tab" type="button" data-azione="account" aria-label="Account e promemoria">${icona("user", 22)}</button>
@@ -70,6 +95,8 @@ function senzaConfigurazione() {
       </div>
     </main>`;
 }
+
+let datiVisti = false;
 
 /**
  * Ridisegna la vista giusta. La pagina di accesso non si ridisegna da sola, per non perdere quello che stai
@@ -88,6 +115,18 @@ function disegna() {
   const chiave = attivo?.dataset?.input ? `[data-input="${attivo.dataset.input}"]${attivo.dataset.campo ? `[data-campo="${attivo.dataset.campo}"]` : ""}` : null;
   let selezione = null;
   try { selezione = chiave ? [attivo.selectionStart, attivo.selectionEnd] : null; } catch { /* date e number */ }
+
+  // Primo arrivo dei dati: anche questo è un'entrata.
+  if (nome === "app" && stato.piante && !datiVisti) {
+    datiVisti = true;
+    segnaEntrata();
+  }
+  if (!stato.piante) datiVisti = false;
+  const trascorso = performance.now() - entrataDa;
+  if (trascorso < ENTRATA_MS) {
+    app.dataset.entra = versoEntrata;
+    app.style.setProperty("--gia", `${-Math.round(trascorso)}ms`);
+  } else delete app.dataset.entra;
 
   app.dataset.vista = nome;
   app.innerHTML = String(contenuto);
@@ -171,20 +210,93 @@ sceltaFoto.addEventListener("change", () => {
   if (file && fotoPer) pianta.fotoScelta(fotoPer, file);
 });
 
+// ───────────────────────────────────────── cambio pagina
+// La foto della pianta vola dalla riga (o dalla carta) al ritratto della scheda, e ritorno: View Transitions con
+// un nome condiviso, messo solo sulle due foto giuste e solo se si vedono.
+const chiaveRotta = (r) => `${r.nome}/${r.param.join("/")}`;
+const scorrimenti = new Map(); // pagina → dove eri arrivato, per ritrovarlo tornando indietro
+
+function nomina(el) {
+  for (const x of document.querySelectorAll("[data-vola]")) {
+    x.style.viewTransitionName = "";
+    delete x.dataset.vola;
+  }
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return; // fuori schermo: niente volo
+  el.style.viewTransitionName = "foto-pianta";
+  el.dataset.vola = "";
+}
+const fotoInElenco = (id) => app.querySelector(`a[href="#/pianta/${id}"] .foto`);
+const fotoRitratto = () => app.querySelector(".ritratto-cornice");
+
+/** Aspetta (poco) che la foto della nuova pagina sia pronta, così il volo non atterra su un riquadro vuoto. */
+function fotoPronta(img) {
+  if (!img || img.complete) return Promise.resolve();
+  return Promise.race([img.decode().catch(() => {}), new Promise((ok) => setTimeout(ok, 160))]);
+}
+
 let rottaPrecedente = rotta();
 window.addEventListener("hashchange", () => {
   normalizza();
   const r = rotta();
+  const da = rottaPrecedente;
   // Uscendo da un form senza salvare la bozza si butta: rientrando si riparte da com'era.
-  const prima = vistaPer(rottaPrecedente);
-  const stessaPagina = prima === vistaPer(r) && r.nome === rottaPrecedente.nome && r.param.join("/") === rottaPrecedente.param.join("/");
+  const prima = vistaPer(da);
+  const stessaPagina = prima === vistaPer(r) && chiaveRotta(r) === chiaveRotta(da);
   if (prima.abbandona && !stessaPagina) prima.abbandona();
   rottaPrecedente = r;
+  scorrimenti.set(chiaveRotta(da), scrollY);
   chiudiFoglio();
-  disegna();
-  window.scrollTo(0, 0);
-  document.querySelector("#vista h1")?.focus({ preventScroll: true });
+
+  const pd = profondita(da);
+  const pr = profondita(r);
+  const tipo = pr > pd ? "avanti" : pr < pd ? "indietro" : "tab";
+  // Tornando indietro ritrovi il punto dell'elenco; andando avanti o cambiando tab si parte dall'alto.
+  const y = tipo === "indietro" ? scorrimenti.get(chiaveRotta(r)) || 0 : 0;
+
+  // Foto che vola: elenco → scheda (andata) o scheda → elenco (ritorno).
+  const versoScheda = r.nome === "pianta" && !r.param[1] && da.nome !== "pianta";
+  const dallaScheda = da.nome === "pianta" && !da.param[1] && r.nome !== "pianta";
+  nomina(versoScheda ? fotoInElenco(r.param[0]) : dallaScheda ? fotoRitratto() : null);
+
+  transizione(tipo, async () => {
+    segnaEntrata(tipo === "tab" ? "su" : tipo);
+    disegna();
+    window.scrollTo(0, y);
+    if (versoScheda) {
+      nomina(fotoRitratto());
+      await fotoPronta(app.querySelector(".ritratto-foto img"));
+    } else if (dallaScheda) nomina(fotoInElenco(da.param[0]));
+    else nomina(null);
+    document.querySelector("#vista h1")?.focus({ preventScroll: true });
+  });
 });
+
+// Appena il dito tocca una pianta, la foto grande della scheda comincia a scaricarsi.
+document.addEventListener("pointerdown", (e) => {
+  const a = e.target.closest?.('a[href^="#/pianta/"]');
+  const id = a?.getAttribute("href").split("/")[2];
+  const p = id && stato.piante?.find((x) => x.id === id);
+  if (p) new Image().src = fotoSpecie(specieDi(p), "copertina");
+}, { passive: true });
+
+// Swipe orizzontale sulla griglia del calendario: mese dopo o prima. (Il listener sul documento abilita anche
+// :active su iOS, che senza un touchstart non mostra lo stato premuto.)
+let tocco = null;
+document.addEventListener("touchstart", (e) => {
+  tocco = e.touches.length === 1 && e.target.closest?.(".cal-griglia")
+    ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    : null;
+}, { passive: true });
+document.addEventListener("touchend", (e) => {
+  if (!tocco) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - tocco.x;
+  const dy = t.clientY - tocco.y;
+  tocco = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) oggi.scorriMese(dx < 0 ? 1 : -1);
+}, { passive: true });
 
 // Tornando sull'app (dalla notifica o dopo ore): giorno aggiornato e dati riletti, se sono vecchi di qualche minuto.
 let ultimoCaricamento = 0;

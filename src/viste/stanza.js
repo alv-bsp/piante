@@ -7,6 +7,7 @@ import { registraCure } from "../dati.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { miniatura, statoBreve, contaPiante } from "./comuni.js";
 import { annulla } from "./cure.js";
+import { vibra, schizzi, lampo } from "../ui/effetti.js";
 
 const etichetta = (n) => (n ? `Segna ${n === 1 ? "1 bagnata" : `${n} bagnate`}` : "Nessuna spuntata");
 
@@ -39,6 +40,19 @@ function render(stanza) {
     </div>`;
 }
 
+/** Dopo che il foglio è sceso: pioggia sul pulsante della stanza e un lampo sulle righe bagnate, una dopo l'altra. */
+function festeggia(ids) {
+  const stanza = trovaPianta(ids[0])?.stanza;
+  setTimeout(() => {
+    const chip = [...document.querySelectorAll('#app [data-azione="bagna-stanza"]')].find((b) => b.dataset.stanza === stanza);
+    schizzi(chip, "acqua", { quante: 18 });
+    ids.forEach((id, i) => {
+      const riga = document.querySelector(`#app .riga-pianta [data-id="${id}"]`)?.closest(".riga-pianta");
+      setTimeout(() => lampo(riga), i * 70);
+    });
+  }, 200);
+}
+
 const spuntate = () => [...document.querySelectorAll("#foglio [data-spunta]:checked")].map((el) => el.dataset.spunta);
 
 /** Aggiorna il pulsante quando cambi una spunta (main.js, evento change). */
@@ -60,9 +74,11 @@ export const azioni = {
     el.disabled = true;
     el.setAttribute("aria-busy", "true");
     const il = new Date().toISOString();
+    vibra();
     try {
       const righe = await registraCure(ids.map((pianta_id) => ({ pianta_id, tipo: "bagnata", il })));
       chiudiFoglio();
+      festeggia(ids);
       toast(`${contaPiante(righe.length)} segnate come bagnate.`, { azione: () => annulla(righe) });
     } catch (e) {
       console.error("bagna stanza", e);

@@ -5,6 +5,7 @@ import { caricaStorico, annullaCure, archiviaPianta, caricaDiario, aggiungiAlDia
 import { preparaFoto, urlInCache, idrataFoto } from "../foto.js";
 import { specieDi } from "../specie.js";
 import { mascotte } from "../ui/mascotte.js";
+import { vibra, molla, cuori, schizzi } from "../ui/effetti.js";
 import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
@@ -19,6 +20,16 @@ const diarioInArrivo = new Set();
 let altro = { id: null, giorno: null };
 // Foto del diario appena scelta e non ancora salvata: { piantaId, foto, giorno, nota }.
 let nuovaFoto = null;
+// Ultimo umore mostrato: se cambia mentre sei sulla scheda (hai appena bagnato), la goccia festeggia.
+let ultimo = { id: null, umore: null };
+
+// Cosa dice la goccia quando la tocchi.
+const BATTUTE = {
+  felice: ["Che solletico!", "Ehi, ciao!", "Si sta bene qui", "Mi fai arrossire"],
+  sete: ["Un goccio, dai!", "Ho la gola secca", "Acqua, per favore!"],
+  grata: ["Grazie ancora!", "Che bella bevuta", "Adesso sì che si ragiona"],
+  dorme: ["Zzz… ancora cinque minuti", "Sto sognando la primavera"],
+};
 
 /** Umore della mascotte e cosa dice, dallo stato della pianta. */
 function fumetto(p, st, cicli) {
@@ -78,6 +89,8 @@ export function render(s, { rotta, avviso = "" }) {
   const cicli = cicliDi(p);
   const f = fumetto(p, st, cicli);
   const specie = specieDi(p);
+  const cambiato = ultimo.id === p.id && ultimo.umore !== f.umore;
+  ultimo = { id: p.id, umore: f.umore };
 
   return html`
     <header class="scheda-testa">
@@ -92,11 +105,13 @@ export function render(s, { rotta, avviso = "" }) {
       </div>
 
       <div class="ritratto">
-        <div class="ritratto-cornice">${foto(p, "copertina", "ritratto-foto")}</div>
-        <div class="ritratto-mascotte">${mascotte(f.umore, 112)}</div>
+        <div class="ritratto-cornice">${foto(p, "copertina", "ritratto-foto", { segnaposto: true })}</div>
+        <button class="ritratto-mascotte" type="button" data-azione="mascotte" data-umore="${f.umore}" aria-label="Coccola ${p.nome}">
+          ${mascotte(f.umore, 112, { salta: cambiato })}
+        </button>
       </div>
 
-      <section class="fumetto" aria-live="polite">
+      <section class="fumetto ${cambiato ? "cambia" : ""}" aria-live="polite">
         <span class="fumetto-cuore">${icona("heart", 22)}</span>
         <p class="fumetto-titolo">${f.titolo}</p>
         <p class="fumetto-testo">${f.testo}</p>
@@ -148,10 +163,10 @@ function pulsantiere(p, st, cicli, s) {
   let centrale;
   if (!st.automatica) {
     centrale = inAcqua.length
-      ? html`<button class="tasto-grande acqua" type="button" data-azione="bagnata-concime" data-id="${p.id}">${icona(v.icona, 30, 2.2)}<span>${v.fatto === "Bagnata" ? "Bagna" : "Rabbocca"}</span><small class="tasto-extra">+ concime</small></button>`
-      : html`<button class="tasto-grande acqua" type="button" data-azione="bagnata" data-id="${p.id}">${icona(v.icona, 30, 2.2)}<span>${v.fatto === "Bagnata" ? "Bagna" : "Rabbocca"}</span></button>`;
+      ? html`<button class="tasto-grande acqua chiama" type="button" data-azione="bagnata-concime" data-id="${p.id}">${icona(v.icona, 30, 2.2)}<span>${v.fatto === "Bagnata" ? "Bagna" : "Rabbocca"}</span><small class="tasto-extra">+ concime</small></button>`
+      : html`<button class="tasto-grande acqua ${st.daControllare ? "chiama" : ""}" type="button" data-azione="bagnata" data-id="${p.id}">${icona(v.icona, 30, 2.2)}<span>${v.fatto === "Bagnata" ? "Bagna" : "Rabbocca"}</span></button>`;
   } else if (concimeDaDare.length) {
-    centrale = html`<button class="tasto-grande concime" type="button" data-azione="concimata" data-id="${p.id}" data-ciclo="${concimeDaDare[0].ciclo.id}">${icona("flask", 28, 2.2)}<span>Concima</span></button>`;
+    centrale = html`<button class="tasto-grande concime chiama" type="button" data-azione="concimata" data-id="${p.id}" data-ciclo="${concimeDaDare[0].ciclo.id}">${icona("flask", 28, 2.2)}<span>Concima</span></button>`;
   } else {
     centrale = html`<span class="tasto-grande vuoto-tasto" aria-hidden="true">${icona("sprout", 28, 2)}<span>A posto</span></span>`;
   }
@@ -330,11 +345,41 @@ export const input = {
 
 export function abbandona() {
   altro = { id: null, giorno: null };
+  ultimo = { id: null, umore: null };
+}
+
+let battuta = null;
+/** La goccia coccolata: rimbalza, manda cuori e dice qualcosa per un paio di secondi. */
+function coccola(el) {
+  const svg = el.querySelector("svg");
+  vibra();
+  molla(svg);
+  cuori(el, el.dataset.umore === "sete" ? 3 : 5);
+  const titolo = document.querySelector("#app .fumetto-titolo");
+  if (!titolo) return;
+  const frasi = BATTUTE[el.dataset.umore] || BATTUTE.felice;
+  const originale = battuta?.el === titolo ? battuta.originale : titolo.textContent;
+  let frase = frasi[Math.floor(Math.random() * frasi.length)];
+  if (frase === titolo.textContent) frase = frasi[(frasi.indexOf(frase) + 1) % frasi.length];
+  titolo.textContent = frase;
+  titolo.parentElement.classList.remove("parla");
+  void titolo.offsetWidth; // riparte l'animazione
+  titolo.parentElement.classList.add("parla");
+  clearTimeout(battuta?.timer);
+  battuta = {
+    el: titolo,
+    originale,
+    timer: setTimeout(() => {
+      if (titolo.isConnected) titolo.textContent = originale;
+      battuta = null;
+    }, 2600),
+  };
 }
 
 const voceDi = (el) => stato.diario.get(el.dataset.id)?.find((v) => v.id === el.dataset.voce);
 
 export const azioni = {
+  mascotte: coccola,
   "diario-apri": (el) => {
     const p = trovaPianta(el.dataset.id);
     const v = voceDi(el);
@@ -360,6 +405,10 @@ export const azioni = {
       await aggiungiAlDiario(p, n.foto, giorno, nota);
       nuovaFoto = null;
       chiudiFoglio();
+      vibra();
+      const voce = document.querySelector(`#app .diario-voce[data-id="${p.id}"]`);
+      molla(voce, 0.6);
+      schizzi(voce, "concime", { quante: 8, forza: 0.7 });
       toast("Foto aggiunta al diario.");
     } catch (e) {
       console.error("diario", e);

@@ -119,11 +119,15 @@ export function dettagli(p, { conStanza = false } = {}) {
   return [conStanza ? p.stanza : null, tipo, p.vaso, idro(p) ? "idroponica" : null].filter(Boolean).join(" · ");
 }
 
-/** Foto generica della specie (vedi specie.js). formato: mini, carta, copertina. */
-export function foto(p, formato = "carta", classe = formato) {
+/**
+ * Foto generica della specie (vedi specie.js). formato: mini, carta, copertina.
+ * `segnaposto`: sotto la foto grande c'è la miniatura (già in cache dagli elenchi), così il riquadro non è mai vuoto
+ * mentre la grande arriva, e la foto che vola dall'elenco atterra su un'immagine.
+ */
+export function foto(p, formato = "carta", classe = formato, { segnaposto = false } = {}) {
   const specie = specieDi(p);
   return html`
-    <div class="foto ${classe}">
+    <div class="foto ${classe}" ${segnaposto ? html`style="background-image:url('${fotoSpecie(specie, "mini")}')"` : ""}>
       <img src="${fotoSpecie(specie, formato)}" alt="${specie.nome}" loading="lazy" decoding="async"
         onerror="this.remove()">
     </div>`;

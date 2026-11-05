@@ -45,6 +45,8 @@
 
   /* movimento */
   --dur: 180ms; --dur-long: 260ms; --ease: cubic-bezier(.2, .7, .3, 1);
+  --molla: cubic-bezier(.34, 1.56, .64, 1);   /* supera un po' il bersaglio e torna: per i rilasci e i pop */
+  --premi: 70ms;                              /* la pressione è immediata, il rilascio rimbalza */
 
   color-scheme: dark;
 }

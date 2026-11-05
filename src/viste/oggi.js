@@ -4,6 +4,7 @@ import { aggiorna, inOrdine, oggiDaFare } from "../stato.js";
 import { eventi, settimane } from "../calendario.js";
 import { giornoLungo, quanto, traQuanto } from "../tempo.js";
 import { spiegazione } from "../notifiche.js";
+import { vibra, festa as coriandoli } from "../ui/effetti.js";
 import { PIANTE_DI_PARTENZA } from "../partenza.js";
 import { testata, vuoto, azioniCura, verbi, contaPiante, miniatura, foto, regolaCiclo } from "./comuni.js";
 
@@ -16,6 +17,10 @@ const NOMI_MESI = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
 // Mese mostrato e giorno scelto: restano finché non cambi pagina.
 let mese = null;   // "AAAA-MM"
 let scelto = null; // "AAAA-MM-GG"
+// Animazioni da fare una volta sola, nel ridisegno subito dopo il tocco (i ridisegni successivi non le ripetono).
+let scorre = null;          // "avanti" · "indietro": il mese che entra
+let appenaScelto = false;   // il giorno toccato fa pop
+let primaDaFare = null;     // quante cose c'erano da fare oggi al disegno precedente: se diventano zero, festa
 
 const saluto = () => {
   const h = new Date().getHours();
@@ -25,6 +30,18 @@ const saluto = () => {
 export function abbandona() {
   mese = null;
   scelto = null;
+  primaDaFare = null;
+}
+
+/** Mese dopo (1) o prima (-1): dalle frecce e dallo swipe sulla griglia. */
+export function scorriMese(delta) {
+  if (!mese) return;
+  const [a, m] = mese.split("-").map(Number);
+  mese = new Date(Date.UTC(a, m - 1 + delta, 1)).toISOString().slice(0, 7);
+  scorre = delta > 0 ? "avanti" : "indietro";
+  vibra();
+  aggiorna({});
+  scorre = null;
 }
 
 export function render(s, { avviso = "" } = {}) {
@@ -52,7 +69,7 @@ export function render(s, { avviso = "" } = {}) {
         <h2>${NOMI_MESI[m - 1]} ${anno}</h2>
         <button class="icona-btn piccola" type="button" data-azione="cal-mese" data-delta="1" aria-label="Mese dopo">${icona("chevron-right", 18)}</button>
       </div>
-      <div class="cal-griglia" role="grid">
+      <div class="cal-griglia ${scorre ? `scorre-${scorre}` : ""}" role="grid">
         ${GIORNI_SETTIMANA.map((g) => html`<span class="cal-intestazione">${g}</span>`)}
         ${griglia.flat().map((g) => {
           if (!g) return html`<span></span>`;
@@ -62,7 +79,7 @@ export function render(s, { avviso = "" } = {}) {
           const conc = oggiQui ? oggiDa.concime.length : e?.concime.length || 0;
           const fatte = e?.fatte.length || 0;
           return html`
-            <button class="cal-giorno ${oggiQui ? "oggi" : ""} ${g === scelto ? "scelto" : ""} ${g < s.oggi ? "passato" : ""}"
+            <button class="cal-giorno ${oggiQui ? "oggi" : ""} ${g === scelto ? `scelto${appenaScelto ? " appena" : ""}` : ""} ${g < s.oggi ? "passato" : ""}"
               type="button" data-azione="cal-giorno" data-giorno="${g}" aria-label="${giornoLungo(g)}" aria-pressed="${String(g === scelto)}">
               <span class="cal-numero">${Number(g.slice(8))}</span>
               <span class="cal-punti">
@@ -73,11 +90,17 @@ export function render(s, { avviso = "" } = {}) {
       </div>
       <div class="cal-legenda"><span><i class="punto acqua"></i>Acqua</span><span><i class="punto concime"></i>Concime</span><span><i class="punto fatto"></i>Fatto</span></div>
     </section>
-    ${scelto === s.oggi ? oggi(s, tutte, oggiDa) : giorno(s, scelto, eventi(s, scelto, scelto, s.oggi).get(scelto))}`;
+    <div class="cal-dettaglio ${appenaScelto ? "appare" : ""}">
+      ${scelto === s.oggi ? oggi(s, tutte, oggiDa) : giorno(s, scelto, eventi(s, scelto, scelto, s.oggi).get(scelto))}
+    </div>`;
 }
 
-/** Il giorno di oggi: le carte da fare, come prima. */
+/** Il giorno di oggi: le carte da fare, come prima. Quando sistemi l'ultima, festa. */
 function oggi(s, tutte, { acqua, concime }) {
+  const n = acqua.length + concime.length;
+  const festa = primaDaFare > 0 && n === 0;
+  primaDaFare = n;
+  if (festa) requestAnimationFrame(() => coriandoli(document.querySelector("#app .a-posto .vuoto-icona")));
   return html`
     ${acqua.length ? html`
       <h2 class="titoletto">Da controllare oggi <span class="conta">${acqua.length}</span></h2>
@@ -85,7 +108,7 @@ function oggi(s, tutte, { acqua, concime }) {
     ${concime.length ? html`
       <h2 class="titoletto">Da concimare oggi <span class="conta">${concime.length}</span></h2>
       <ul class="carte">${concime.map(cartaConcime)}</ul>` : ""}
-    ${!acqua.length && !concime.length ? tuttoAPosto(tutte.find((x) => Number.isFinite(x.stato.mancano))) : ""}`;
+    ${!n ? tuttoAPosto(tutte.find((x) => Number.isFinite(x.stato.mancano)), festa) : ""}`;
 }
 
 /** Un altro giorno: cosa è previsto (futuro) o cosa hai fatto (passato). */
@@ -123,15 +146,14 @@ function giorno(s, g, e) {
 }
 
 export const azioni = {
-  "cal-mese": (el) => {
-    const [a, m] = mese.split("-").map(Number);
-    const d = new Date(Date.UTC(a, m - 1 + Number(el.dataset.delta), 1));
-    mese = d.toISOString().slice(0, 7);
-    aggiorna({});
-  },
+  "cal-mese": (el) => scorriMese(Number(el.dataset.delta)),
   "cal-giorno": (el) => {
+    if (scelto === el.dataset.giorno) return;
     scelto = el.dataset.giorno;
+    appenaScelto = true;
+    vibra();
     aggiorna({});
+    appenaScelto = false;
   },
 };
 
@@ -181,10 +203,10 @@ function cartaConcime({ pianta: p, ciclo: c, stato: st }) {
     </li>`;
 }
 
-function tuttoAPosto(prima) {
+function tuttoAPosto(prima, festa = false) {
   const prossima = prima ? `Prossimo controllo: ${prima.pianta.nome}, ${traQuanto(prima.stato.mancano)}.` : "";
   return html`
-    <section class="a-posto">
+    <section class="a-posto ${festa ? "festa" : ""}">
       <div class="vuoto-icona">${icona("check", 30, 2.2)}</div>
       <h2>Tutto a posto</h2>
       <p>Niente da bagnare né da concimare oggi. ${prossima}</p>

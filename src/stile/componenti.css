@@ -43,9 +43,9 @@
   font-weight: 650;
   letter-spacing: -.01em;
   text-decoration: none;
-  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  transition: transform 320ms var(--molla), background var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
-.btn:active { transform: scale(.97); background: var(--vetro-forte); }
+.btn:active { transform: scale(.95); background: var(--vetro-forte); transition-duration: var(--premi); }
 .btn.primario {
   border-color: transparent;
   background: var(--accento);
@@ -67,9 +67,9 @@
   border-radius: 50%;
   background: var(--vetro);
   color: var(--ink);
-  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
+  transition: transform 320ms var(--molla), background var(--dur) var(--ease);
 }
-.icona-btn:active { transform: scale(.94); background: var(--vetro-forte); }
+.icona-btn:active, .indietro:active .icona-btn { transform: scale(.88); background: var(--vetro-forte); transition-duration: var(--premi); }
 .icona-btn.accento { border-color: transparent; background: var(--accento); color: var(--su-accento); box-shadow: var(--alone); }
 .icona-btn.piccola { width: 36px; height: 36px; color: var(--ink-2); }
 .icona-btn[disabled] { opacity: .4; cursor: default; }
@@ -100,8 +100,9 @@
   font-size: var(--t-sm);
   font-weight: 600;
   white-space: nowrap;
-  transition: background var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), transform 320ms var(--molla);
 }
+.chip:active { transform: scale(.94); transition-duration: var(--premi); }
 .chip svg { color: var(--accento-chiaro); }
 .chip[aria-pressed="true"], .chip[aria-checked="true"] {
   border-color: transparent;
@@ -158,9 +159,13 @@
   background: var(--vetro);
   color: var(--ink);
   text-decoration: none;
-  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), transform 340ms var(--molla), box-shadow var(--dur) var(--ease);
 }
-.tab:active { transform: scale(.94); }
+.tab:active { transform: scale(.86); transition-duration: var(--premi); }
+.tab.appena { animation: tab-pop 520ms var(--molla); }
+.tab-conta.salta { animation: conta-salta 560ms var(--molla); }
+@keyframes tab-pop { from { transform: scale(.72); } }
+@keyframes conta-salta { 0% { transform: scale(.3); } 55% { transform: scale(1.3); } 100% { transform: none; } }
 .tab[aria-current="page"] {
   border-color: transparent;
   background: var(--accento);
@@ -279,7 +284,7 @@
 .riga-stato.scaduta { color: var(--accento-chiaro); font-weight: 700; }
 .riga-stato.concime { color: var(--ink-3); }
 .riga-quando { color: var(--ink-2); font-size: var(--t-sm); white-space: nowrap; }
-.riga-pianta { display: flex; align-items: center; gap: var(--s3); }
+.riga-pianta { display: flex; align-items: center; gap: var(--s3); margin: 0 -8px; padding: 0 8px; border-radius: 16px; }
 .riga:active .foto { opacity: .8; }
 
 .stanza-testa { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
@@ -424,8 +429,17 @@
   overflow: auto;
 }
 .foglio::backdrop { background: rgba(4, 12, 6, .5); }
-.foglio[open] { animation: foglio-sale var(--dur-long) var(--ease); }
-@keyframes foglio-sale { from { transform: translateY(24px); opacity: 0; } }
+/* Sale dal fondo, scende chiudendo (avvisi.js aggiunge .chiude), segue il dito quando lo trascini giù. */
+.foglio { transition: transform 360ms var(--molla); }
+.foglio.trascinato { transition: none; }
+.foglio[open] { animation: foglio-sale 440ms cubic-bezier(.22, 1, .36, 1); }
+.foglio[open]::backdrop { animation: velo-appare 320ms ease-out; }
+.foglio.chiude { animation: foglio-scende 220ms cubic-bezier(.4, 0, 1, 1) forwards; }
+.foglio.chiude::backdrop { animation: velo-sparisce 220ms ease-in forwards; }
+@keyframes foglio-sale { from { transform: translateY(100%); } }
+@keyframes foglio-scende { to { transform: translateY(100%); } }
+@keyframes velo-appare { from { opacity: 0; } }
+@keyframes velo-sparisce { to { opacity: 0; } }
 .maniglia { width: 40px; height: 5px; margin: 0 auto 12px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
 .foglio-testa { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s4); }
 .foglio-testa h2 { font-size: var(--t-lg); font-weight: 750; letter-spacing: -.02em; }
@@ -490,12 +504,29 @@
   text-align: center;
   box-shadow: var(--ombra);
   opacity: 0;
-  transform: translate(-50%, 8px);
+  transform: translate(-50%, 18px) scale(.9);
   pointer-events: none;
-  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  transition: opacity 200ms var(--ease), transform 460ms var(--molla);
 }
-.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .toast.con-azione { display: flex; align-items: center; gap: var(--s3); padding: 6px 6px 6px 20px; }
+/* Il tempo che resta per annullare: una barretta che si consuma. */
+.toast.con-azione::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, .3);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.toast.con-azione.on::after { animation: toast-tempo var(--durata, 5000ms) linear forwards; }
+@keyframes toast-tempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.toast-azione { transition: transform 300ms var(--molla); }
+.toast-azione:active { transform: scale(.9); transition-duration: var(--premi); }
 .toast.con-azione.on { pointer-events: auto; }
 .toast-azione {
   min-height: 38px;
@@ -700,13 +731,37 @@ option { background: #1a3419; color: #fff; }
   background: linear-gradient(135deg, #d6f7a0, var(--accento) 55%, #1fbf8f);
   box-shadow: 0 18px 40px rgba(0, 0, 0, .35), 0 0 40px rgba(63, 224, 111, .25);
 }
-.ritratto-foto { width: 100%; aspect-ratio: 1; border-radius: 41px; }
-.ritratto-mascotte { position: absolute; left: 50%; bottom: -62px; transform: translateX(-50%); }
-.mascotte { overflow: visible; }
+.ritratto-foto { width: 100%; aspect-ratio: 1; border-radius: 41px; background-size: cover; background-position: center; }
+.ritratto-mascotte {
+  position: absolute;
+  left: 50%;
+  bottom: -62px;
+  transform: translateX(-50%);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.mascotte { overflow: visible; transform-origin: 50% 92%; transition: scale 300ms var(--molla); }
+.ritratto-mascotte:active .mascotte { scale: .9; transition-duration: var(--premi); }
 .mascotte .m-corpo { transform-origin: 60px 110px; animation: m-respira 3.2s ease-in-out infinite; }
+.m-salto { transform-origin: 60px 112px; }
 .m-sete .m-corpo { animation: m-ondeggia 1.6s ease-in-out infinite; }
-.m-grata .m-corpo { animation: m-salta .9s var(--ease) 2, m-respira 3.2s ease-in-out 1.8s infinite; }
+.m-festa .m-salto { animation: m-salta .9s var(--ease) 2; }
 .m-dorme .m-corpo { animation: m-respira 4.8s ease-in-out infinite; }
+/* Occhi aperti: ogni tanto sbattono (più spesso quando ha sete). */
+.m-felice .m-occhi, .m-sete .m-occhi { transform-box: fill-box; transform-origin: center; animation: m-batti 4.6s infinite; }
+.m-sete .m-occhi { animation-duration: 3.2s; }
+@keyframes m-batti { 0%, 91%, 97%, 100% { transform: none; } 94% { transform: scaleY(.1); } }
+/* Aprendo la scheda la goccia cade nel ritratto e rimbalza. */
+@keyframes m-cade {
+  0% { transform: translateY(-80px) scale(.85, 1.15); opacity: 0; }
+  40% { transform: translateY(0) scale(1.2, .8); opacity: 1; }
+  62% { transform: translateY(-10px) scale(.94, 1.07); }
+  82% { transform: translateY(0) scale(1.04, .96); }
+  100% { transform: none; }
+}
 .m-goccia { animation: m-suda 1.6s ease-in infinite; }
 .m-zeta { animation: m-zz 2.6s ease-in-out infinite; }
 @keyframes m-respira { 50% { transform: translateY(-4px) scale(1.02, .98); } }
@@ -739,6 +794,13 @@ option { background: #1a3419; color: #fff; }
   box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
 }
 .fumetto-cuore svg { fill: currentColor; }
+.fumetto-cuore { animation: cuore-batte 3s ease-in-out infinite; }
+.fumetto.cambia { animation: fumetto-pop 620ms var(--molla); }
+.fumetto.cambia .fumetto-cuore { animation: cuore-batte .9s ease-in-out 2; }
+.fumetto.parla .fumetto-titolo { animation: parla 460ms var(--molla); }
+@keyframes cuore-batte { 0%, 58%, 100% { scale: 1; } 66% { scale: 1.22; } 76% { scale: .94; } 86% { scale: 1.1; } }
+@keyframes fumetto-pop { from { transform: scale(.9); opacity: .3; } }
+@keyframes parla { from { transform: scale(.8) rotate(-3deg); opacity: 0; } }
 .fumetto-titolo { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
 .fumetto-testo { margin-top: 4px; color: var(--ink-2); }
 
@@ -753,10 +815,10 @@ option { background: #1a3419; color: #fff; }
   color: #fff;
   font-weight: 800;
   letter-spacing: -.01em;
-  transition: transform var(--dur) var(--ease);
+  transition: transform 360ms var(--molla), box-shadow 360ms var(--molla);
 }
-.tasto-grande:active, .tasto-tondo:active { transform: scale(.93); }
 .tasto-grande {
+  position: relative;
   flex: 1;
   max-width: 220px;
   height: 104px;
@@ -783,6 +845,28 @@ option { background: #1a3419; color: #fff; }
 .tasto-tondo.rimanda { background: linear-gradient(180deg, #a78bfa, #7c3aed); box-shadow: 0 7px 0 rgba(70, 30, 140, .55); }
 .tasto-tondo.foto-tasto { background: linear-gradient(180deg, #818cf8, #4f46e5); box-shadow: 0 7px 0 rgba(40, 36, 140, .55); }
 .tasto-tondo.spento { visibility: hidden; }
+/* Premuti affondano, come tasti veri: l'ombra sotto si accorcia. Rilasciati rimbalzano su. */
+.tasto-grande:active { transform: translateY(7px) scale(.97); box-shadow: 0 3px 0 rgba(2, 74, 120, .55), 0 8px 16px rgba(2, 132, 199, .3); transition-duration: var(--premi); }
+.tasto-grande.concime:active { box-shadow: 0 3px 0 rgba(10, 80, 36, .6), 0 6px 14px rgba(63, 224, 111, .3); }
+.tasto-tondo:active { transform: translateY(5px) scale(.95); transition-duration: var(--premi); }
+.tasto-tondo.rimanda:active { box-shadow: 0 2px 0 rgba(70, 30, 140, .55); }
+.tasto-tondo.foto-tasto:active { box-shadow: 0 2px 0 rgba(40, 36, 140, .55); }
+.tasto-grande[aria-busy="true"] svg { animation: m-respira .7s ease-in-out infinite; }
+/* Quando c'è da fare, il tasto chiama: un'onda che si allarga piano e la goccia che dondola. */
+.tasto-grande.chiama::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 3px solid rgba(125, 211, 252, .75);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: chiama 2.2s var(--ease) infinite;
+}
+.tasto-grande.concime.chiama::after { border-color: rgba(142, 240, 168, .75); }
+.tasto-grande.chiama > svg { animation: dondola 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+.tasto-grande.chiama:active::after { animation: none; opacity: 0; }
+@keyframes chiama { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(1.1, 1.24); opacity: 0; } }
+@keyframes dondola { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
 .zz { font-size: 24px; line-height: 1; font-weight: 900; color: #fbcfe8; }
 .zz small { font-size: 13px; vertical-align: super; }
 .scheda .solo-acqua { display: block; margin: var(--s2) auto 0; }
@@ -872,3 +956,115 @@ option { background: #1a3419; color: #fff; }
 .cal-giorno.scelto .punto.concime, .cal-giorno.scelto .punto.fatto { background: var(--su-accento); }
 .cal-legenda { display: flex; justify-content: center; gap: 16px; margin-top: 10px; color: var(--ink-3); font-size: 12px; font-weight: 600; }
 .cal-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ═════════════════ Movimento ═════════════════
+   Le pagine si ridisegnano con innerHTML: le animazioni "una volta" dipendono da classi messe solo nel ridisegno
+   giusto (appena, salta, scorre-*, cambia, festa) o da #app[data-entra], che main.js tiene per ~700 ms dopo un
+   cambio pagina. --gia sposta indietro i ritardi se la pagina si ridisegna nel frattempo, così non ripartono. */
+
+/* ───────── Tocchi: si preme subito, si rilascia con un rimbalzo ───────── */
+.riga, .carta, .cal-giorno, .diario-voce, .diario-nuova, .invito, .spunta, .link, .altro-giorno summary {
+  transition: transform 320ms var(--molla), scale 320ms var(--molla), opacity var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.riga:active { transform: scale(.975); transition-duration: var(--premi); }
+.carta:has(.carta-foto:active) { transform: scale(.98); transition-duration: var(--premi); }
+.diario-voce:active, .diario-nuova:active { transform: scale(.92); transition-duration: var(--premi); }
+.invito:active { transform: scale(.98); transition-duration: var(--premi); }
+.spunta:active, .link:active, .altro-giorno summary:active { opacity: .6; transition-duration: var(--premi); }
+.cal-giorno:active { scale: .84; transition-duration: var(--premi); }
+.cal-giorno:not(.scelto):active { background: var(--vetro-forte); }
+.spunta input { transition: transform 300ms var(--molla); }
+.spunta input:active { transform: scale(.8); }
+
+/* ───────── Entrata della pagina: i blocchi arrivano a cascata ───────── */
+#app[data-entra] :is(.vista > :not(.scheda), .scheda > :not(.ritratto)) {
+  animation: entra-su 480ms var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms + var(--gia, 0ms));
+}
+#app[data-entra="avanti"] :is(.vista > :not(.scheda), .scheda > :not(.ritratto)) { animation-name: entra-dx; }
+#app[data-entra="indietro"] :is(.vista > :not(.scheda), .scheda > :not(.ritratto)) { animation-name: entra-sx; }
+:is(.vista, .scheda) > :nth-child(2) { --i: 1; }
+:is(.vista, .scheda) > :nth-child(3) { --i: 2; }
+:is(.vista, .scheda) > :nth-child(4) { --i: 3; }
+:is(.vista, .scheda) > :nth-child(5) { --i: 4; }
+:is(.vista, .scheda) > :nth-child(6) { --i: 5; }
+:is(.vista, .scheda) > :nth-child(7) { --i: 6; }
+:is(.vista, .scheda) > :nth-child(n+8) { --i: 7; }
+@keyframes entra-su { from { opacity: 0; transform: translateY(16px); } }
+@keyframes entra-dx { from { opacity: 0; transform: translateX(32px); } }
+@keyframes entra-sx { from { opacity: 0; transform: translateX(-32px); } }
+
+/* La goccia cade nel ritratto, poco dopo la foto */
+#app[data-entra] .ritratto-mascotte .m-salto {
+  animation: m-cade 760ms var(--ease) backwards;
+  animation-delay: calc(200ms + var(--gia, 0ms));
+}
+
+/* La stagione del concime si riempie mese per mese, poi cade il segno di oggi */
+#app[data-entra] .stagione-mese {
+  transform-origin: bottom;
+  animation: mese-cresce 460ms var(--molla) backwards;
+  animation-delay: calc(240ms + var(--m, 0) * 32ms + var(--gia, 0ms));
+}
+#app[data-entra] .stagione-oggi { animation: oggi-cade 520ms var(--molla) backwards; animation-delay: calc(700ms + var(--gia, 0ms)); }
+.stagione-mese:nth-child(2) { --m: 1; }  .stagione-mese:nth-child(3) { --m: 2; }  .stagione-mese:nth-child(4) { --m: 3; }
+.stagione-mese:nth-child(5) { --m: 4; }  .stagione-mese:nth-child(6) { --m: 5; }  .stagione-mese:nth-child(7) { --m: 6; }
+.stagione-mese:nth-child(8) { --m: 7; }  .stagione-mese:nth-child(9) { --m: 8; }  .stagione-mese:nth-child(10) { --m: 9; }
+.stagione-mese:nth-child(11) { --m: 10; } .stagione-mese:nth-child(12) { --m: 11; }
+@keyframes mese-cresce { from { transform: scaleY(.15); opacity: 0; } }
+@keyframes oggi-cade { from { transform: translateY(-16px); opacity: 0; } }
+
+/* ───────── Calendario ───────── */
+.cal-griglia.scorre-avanti .cal-giorno, .calendario:has(.scorre-avanti) .cal-testa h2 { animation: cal-dx 360ms var(--ease) backwards; }
+.cal-griglia.scorre-indietro .cal-giorno, .calendario:has(.scorre-indietro) .cal-testa h2 { animation: cal-sx 360ms var(--ease) backwards; }
+.cal-giorno.appena { animation: giorno-pop 460ms var(--molla); }
+.cal-giorno.appena .punto { animation: punto-pop 420ms var(--molla) 80ms backwards; }
+.cal-dettaglio.appare { animation: entra-su 380ms var(--ease); }
+@keyframes cal-dx { from { opacity: 0; transform: translateX(28px); } }
+@keyframes cal-sx { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes giorno-pop { from { transform: scale(.55); } }
+@keyframes punto-pop { from { transform: scale(0); } }
+
+/* Tutto a posto, appena sistemata l'ultima: il segno di spunta si disegna */
+.a-posto.festa .vuoto-icona { animation: festa-pop 720ms var(--molla); }
+.a-posto.festa .vuoto-icona path { stroke-dasharray: 24; animation: traccia 420ms ease-out 260ms backwards; }
+.a-posto.festa :is(h2, p) { animation: entra-su 480ms var(--ease) 180ms backwards; }
+@keyframes festa-pop { from { transform: scale(0) rotate(-40deg); } }
+@keyframes traccia { from { stroke-dashoffset: 24; } }
+
+/* ───────── Cambio pagina (View Transitions): la foto vola dall'elenco alla scheda ───────── */
+::view-transition-old(root) { animation-duration: 180ms; }
+::view-transition-new(root) { animation-duration: 280ms; }
+::view-transition-group(foto-pianta) {
+  overflow: clip;
+  border-radius: 30px;
+  animation-duration: 460ms;
+  animation-timing-function: cubic-bezier(.2, .85, .25, 1);
+}
+::view-transition-old(foto-pianta), ::view-transition-new(foto-pianta) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation-duration: 320ms;
+}
+
+/* ───────── Particelle (ui/effetti.js) ───────── */
+.effetti { position: fixed; inset: 0; z-index: 70; overflow: hidden; pointer-events: none; }
+.particella { position: absolute; display: block; will-change: transform, opacity; }
+.p-goccia {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 16%, var(--c) 48%);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, .35);
+}
+.p-foglia { border-radius: 0 85% 0 85%; background: var(--c); }
+.p-coriandolo { border-radius: 2px; background: var(--c); }
+.p-cuore svg { width: 100%; height: 100%; fill: var(--c); filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .25)); }
+.p-zeta { display: grid; place-items: center; color: var(--c); font-size: 20px; font-weight: 900; line-height: 1; }
+.anello {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 3px solid var(--c);
+  border-radius: 50%;
+}
