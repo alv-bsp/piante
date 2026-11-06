@@ -54,8 +54,12 @@ export function render(s, { avviso = "" } = {}) {
 // partendo da lì, invece di comparire già piena.
 const livelliPrima = new Map();
 
-/** Quanta acqua resta: piena il giorno in cui la bagni, vuota quando è ora di controllarla. */
-const livelloDi = (st) => (st.giorni > 0 ? Math.min(1, Math.max(0, st.mancano / st.giorni)) : 0);
+/**
+ * Quanta acqua resta: piena il giorno in cui la bagni, vuota quando è ora di controllarla.
+ * Mai segnata (né bagnata né controllata): vuota, anche se il primo controllo non è ancora arrivato.
+ */
+const livelloDi = (st) =>
+  (st.bagnata || st.controllata) && st.giorni > 0 ? Math.min(1, Math.max(0, st.mancano / st.giorni)) : 0;
 
 function riga({ pianta: p, stato: st }) {
   const v = verbi(p);
@@ -76,7 +80,7 @@ function riga({ pianta: p, stato: st }) {
         </span>
       </a>
       ${p.irrigazione_automatica ? "" : html`
-        <button class="icona-btn goccia ${livello === 0 ? "asciutta" : ""}" type="button" data-azione="bagnata" data-id="${p.id}"
-          aria-label="${p.nome}: ${v.fatta} adesso. Acqua rimasta: ${Math.round(livello * 100)}%">${livelloAcqua(v.icona, livello, { da: prima })}</button>`}
+        <button class="icona-btn goccia ${st.daControllare ? "asciutta" : ""}" type="button" data-azione="bagnata" data-id="${p.id}"
+          aria-label="${p.nome}: ${v.fatta} adesso. Acqua rimasta: ${Math.round(livello * 100)}%">${livelloAcqua(livello, { da: prima })}${icona(v.icona, 20)}</button>`}
     </li>`;
 }

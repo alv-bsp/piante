@@ -18,8 +18,9 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
   nell'acqua il pulsante diventa **Con concime**), poi **Da concimare**. Tocca un altro giorno: nel futuro vedi le
   scadenze previste (si spostano se bagni prima o dopo), nel passato quello che hai fatto (ultimi due mesi).
 - **Casa**: tutte le piante divise per stanza, con la foto della specie, l'ultima annaffiatura e una goccia per segnarla al volo.
-  La goccia (il bicchiere, per l'idroponica) fa anche da livello: piena il giorno in cui bagni, si svuota giorno dopo
-  giorno fino al controllo, quando resta vuota con il contorno verde. Dopo "Ancora umida" risale a un terzo.
+  Il cerchio della goccia (del bicchiere, per l'idroponica) fa anche da livello: pieno d'acqua il giorno in cui bagni,
+  si svuota giorno dopo giorno fino al controllo, quando resta vuoto con il bordo verde. Dopo "Ancora umida" risale a
+  un terzo. Una pianta mai segnata parte vuota.
   Accanto a ogni stanza con almeno due piante, **Bagna tutte**: elenco già spuntato, togli quelle saltate, conferma.
 - **Scheda**: foto della specie con la mascotte, una goccia che cambia faccia (felice, assetata, grata dopo
   l'acqua, addormentata a riposo) e ti parla nel fumetto. Sotto, tre tasti: **Umida** (o Livello ok), il grande
@@ -135,7 +136,7 @@ src/tempo.js                       date in parole
 src/foto.js                        foto del diario: ridimensiona, carica, URL firmati
 src/calendario.js                  eventi del calendario: scadenze previste e cure fatte
 src/ui/mascotte.js                 la goccia della scheda (SVG), una faccia per umore
-src/ui/livello.js                  la goccia di Casa che si svuota fino al prossimo controllo
+src/ui/livello.js                  il pulsante goccia di Casa che si svuota fino al prossimo controllo
 src/ui/effetti.js                  micro interazioni: vibrazione, schizzi, cuori, coriandoli, cambio pagina
 src/viste/                         Calendario, Casa, Bagna tutte, scheda, editor, account, accesso
 supabase/modifiche/                migrazioni per chi ha già lo schema
