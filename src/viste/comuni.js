@@ -113,11 +113,16 @@ export function concimeBreve(p, cicli) {
   return parti.join(" · ");
 }
 
-/** Descrizione corta: tipo, vaso, idroponica. */
+/** Descrizione corta: tipo e vaso. Terra o idroponica lo dice l'etichetta qui sotto. */
 export function dettagli(p, { conStanza = false } = {}) {
   const tipo = p.tipo && !p.nome.toLowerCase().includes(p.tipo.toLowerCase()) ? p.tipo : null;
-  return [conStanza ? p.stanza : null, tipo, p.vaso, idro(p) ? "idroponica" : null].filter(Boolean).join(" · ");
+  return [conStanza ? p.stanza : null, tipo, p.vaso].filter(Boolean).join(" · ");
 }
+
+/** Etichetta del substrato, con l'icona: vaso marrone per la terra, bicchiere azzurro per l'idroponica. */
+export const substrato = (p) => (idro(p)
+  ? html`<span class="substrato idroponica">${icona("glass", 13, 2.2)}Idroponica</span>`
+  : html`<span class="substrato terra">${icona("vaso", 13, 2.2)}Terra</span>`);
 
 /**
  * Foto della specie (vedi specie.js), scontornata sul fondo giallo comune. formato: mini, carta, copertina.

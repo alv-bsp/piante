@@ -10,7 +10,7 @@ import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
 import { rinvio, nelMese, conLAcqua, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { barra, vuoto, verbi, foto, statoCicloBreve } from "./comuni.js";
+import { barra, vuoto, verbi, foto, statoCicloBreve, substrato } from "./comuni.js";
 
 export const conTabbar = true;
 
@@ -136,7 +136,7 @@ export function render(s, { rotta, avviso = "" }) {
         <dl class="righe pannello">
           <div><dt>Stanza</dt><dd>${p.stanza}</dd></div>
           ${p.vaso ? html`<div><dt>Vaso</dt><dd>${p.vaso}</dd></div>` : ""}
-          <div><dt>Substrato</dt><dd>${p.substrato === "idroponica" ? "Idroponica" : "Terra"}</dd></div>
+          <div><dt>Substrato</dt><dd>${substrato(p)}</dd></div>
           ${st.automatica ? html`<div><dt>Acqua</dt><dd>Automatica (Home Assistant)</dd></div>` : html`
             <div><dt>Controllo ogni</dt><dd>${p.giorni_estate} giorni in estate, ${p.giorni_inverno} in inverno</dd></div>
             <div><dt>Se ${v.umida.toLowerCase()}</dt><dd>ricontrollo dopo ${rinvio(st.giorni)} giorni</dd></div>`}

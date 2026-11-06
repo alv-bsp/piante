@@ -194,11 +194,12 @@ document.addEventListener("input", (e) => {
   if (f) f(e.target);
 });
 
-// Campo Specie dell'editor: l'elenco dei suggerimenti si apre e si chiude con il fuoco. Toccare un suggerimento
-// non toglie il fuoco al campo (preventDefault), così su iPhone la tastiera non si chiude a metà tocco.
-document.addEventListener("focusin", (e) => { if (e.target.id === "specie") editor.campoSpecie.apri(); });
-document.addEventListener("focusout", (e) => { if (e.target.id === "specie") editor.campoSpecie.chiudi(); });
-document.addEventListener("keydown", (e) => { if (e.target.id === "specie") editor.campoSpecie.tasto(e); });
+// Campi con ricerca dell'editor (Specie, Stanza): l'elenco dei suggerimenti si apre e si chiude con il fuoco.
+// Toccare un suggerimento non toglie il fuoco al campo (preventDefault), così su iPhone la tastiera non si chiude
+// a metà tocco.
+document.addEventListener("focusin", (e) => { if (e.target.dataset?.cerca) editor.ricerca.apri(e.target.dataset.cerca); });
+document.addEventListener("focusout", (e) => { if (e.target.dataset?.cerca) editor.ricerca.chiudi(e.target.dataset.cerca); });
+document.addEventListener("keydown", (e) => { if (e.target.dataset?.cerca) editor.ricerca.tasto(e); });
 for (const tipo of ["pointerdown", "mousedown"]) {
   document.addEventListener(tipo, (e) => { if (e.target.closest?.(".suggerimenti")) e.preventDefault(); });
 }

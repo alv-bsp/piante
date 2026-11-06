@@ -5,7 +5,7 @@ import { salvaPianta } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { toast } from "../ui/avvisi.js";
 import { giornoRoma, stagione, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { cercaSpecie, fotoSpecie, specieDi } from "../specie.js";
+import { cercaSpecie, fotoSpecie, specieDi, normalizza } from "../specie.js";
 import { barra, vuoto, foto } from "./comuni.js";
 
 export const conTabbar = false;
@@ -57,64 +57,92 @@ const cicloNuovo = (b) => ({
   prodotto: "", ogni_giorni: 21, dal_mese: 3, al_mese: 9, con_acqua: !b.irrigazione_automatica, note: "",
 });
 
-/**
- * Specie: decide la foto. Un campo di ricerca: mentre scrivi, sotto compaiono le specie che corrispondono (con la
- * foto), più quelle senza foto che hai già usato. Se non c'è, l'ultima riga la aggiunge com'è, senza foto.
- * Mentre scrivi la pagina non si ridisegna (su iPhone si chiuderebbe la tastiera): cambia solo l'elenco.
- */
-function sceltaSpecie(b) {
+// ───────────────────────────── campi con ricerca (Specie, Stanza)
+// Mentre scrivi, sotto compaiono le voci che corrispondono; se non c'è, l'ultima riga la aggiunge com'è.
+// La pagina non si ridisegna mentre scrivi (su iPhone si chiuderebbe la tastiera): cambia solo l'elenco.
+
+/** Campo con ricerca: `nome` è specie o stanza, `valore` il testo attuale. */
+function campoCerca({ nome, etichetta, valore, segnaposto, iconaCampo = "", maiuscole = "words" }) {
   return html`
-    <div class="campo cerca-specie" id="campo-specie">
-      <label for="specie"><span>Specie</span></label>
+    <div class="campo cerca" id="campo-${nome}">
+      <label for="${nome}"><span>${etichetta}</span></label>
       <div class="cerca-riga">
-        ${icona("sprout", 18)}
-        <input type="text" id="specie" data-input="specie" value="${b.tipo}" maxlength="40"
-          placeholder="Cerca: Monstera, Ficus, Sansevieria…" autocomplete="off" autocapitalize="words" spellcheck="false"
-          role="combobox" aria-expanded="false" aria-controls="specie-elenco" aria-autocomplete="list">
-        ${b.tipo ? html`<button class="icona-btn piccola" type="button" data-azione="specie-svuota" aria-label="Cancella la specie">${icona("x", 16)}</button>` : ""}
+        ${iconaCampo ? icona(iconaCampo, 18) : ""}
+        <input type="text" id="${nome}" data-input="cerca" data-cerca="${nome}" data-campo="${nome}" value="${valore}" maxlength="40"
+          placeholder="${segnaposto}" autocomplete="off" autocapitalize="${maiuscole}" spellcheck="false"
+          role="combobox" aria-expanded="false" aria-controls="${nome}-elenco" aria-autocomplete="list">
+        ${valore ? html`<button class="icona-btn piccola" type="button" data-azione="cerca-svuota" data-nome="${nome}" aria-label="Cancella">${icona("x", 16)}</button>` : ""}
       </div>
-      <ul class="suggerimenti" id="specie-elenco" role="listbox" aria-label="Specie" hidden></ul>
+      <ul class="suggerimenti" id="${nome}-elenco" role="listbox" hidden></ul>
     </div>`;
 }
 
-/** Le righe dei suggerimenti per il testo scritto. */
-function suggerimenti(testo) {
+const riga = (nome, valore, contenuto, classe = "") => html`
+  <li role="option">
+    <button class="suggerimento ${classe}" type="button" data-azione="cerca-scegli" data-cerca="${nome}" data-valore="${valore}">${contenuto}</button>
+  </li>`;
+
+/** Specie: decide la foto. Specie note con la foto, più quelle senza foto che hai già usato. */
+function suggerimentiSpecie(testo) {
   const { risultati, esiste } = cercaSpecie(testo, tipi());
   const nuova = testo.trim();
   // Una parola sola che è un genere noto ("Ficus") prende comunque la foto della specie: lo dico.
   const trovata = nuova && specieDi({ tipo: nuova });
   const conFoto = trovata?.file ? trovata : null;
   return html`
-    ${risultati.slice(0, 30).map((r) => html`
-      <li role="option">
-        <button class="suggerimento" type="button" data-azione="specie-scegli" data-valore="${r.nome}">
-          ${r.specie
-            ? html`<span class="foto mini"><img src="${fotoSpecie(r.specie, "mini")}" alt="" loading="lazy"></span>`
-            : html`<span class="foto mini senza-foto">${icona("sprout", 20, 1.6)}</span>`}
-          <span class="riga-testo">
-            <span class="riga-nome">${r.nome}</span>
-            ${r.specie ? "" : html`<span class="riga-meta">Senza foto</span>`}
-          </span>
-        </button>
-      </li>`)}
-    ${nuova && !esiste ? html`
-      <li role="option">
-        <button class="suggerimento nuova" type="button" data-azione="specie-scegli" data-valore="${nuova}">
-          <span class="foto mini senza-foto">${icona("plus", 20, 2)}</span>
-          <span class="riga-testo">
-            <span class="riga-nome">Aggiungi «${nuova}»</span>
-            <span class="riga-meta">${conFoto ? `Con la foto di ${conFoto.nome}` : "Specie nuova, senza foto"}</span>
-          </span>
-        </button>
-      </li>` : ""}`;
+    ${risultati.slice(0, 30).map((r) => riga("specie", r.nome, html`
+      ${r.specie
+        ? html`<span class="foto mini"><img src="${fotoSpecie(r.specie, "mini")}" alt="" loading="lazy"></span>`
+        : html`<span class="foto mini senza-foto">${icona("sprout", 20, 1.6)}</span>`}
+      <span class="riga-testo">
+        <span class="riga-nome">${r.nome}</span>
+        ${r.specie ? "" : html`<span class="riga-meta">Senza foto</span>`}
+      </span>`))}
+    ${nuova && !esiste ? riga("specie", nuova, html`
+      <span class="foto mini senza-foto">${icona("plus", 20, 2)}</span>
+      <span class="riga-testo">
+        <span class="riga-nome">Aggiungi «${nuova}»</span>
+        <span class="riga-meta">${conFoto ? `Con la foto di ${conFoto.nome}` : "Specie nuova, senza foto"}</span>
+      </span>`, "nuova") : ""}`;
 }
 
+/** Stanza: solo testo. Le stanze che hai già (prima quelle che iniziano così), o una nuova. */
+function suggerimentiStanza(testo) {
+  const q = normalizza(testo);
+  const tutte = stanze().filter((x) => x !== "Da sistemare");
+  const punteggio = (x) => {
+    const n = normalizza(x);
+    if (!q || n.startsWith(q)) return 0;
+    if (n.split(/\s+/).some((parola) => parola.startsWith(q))) return 1;
+    return n.includes(q) ? 2 : null;
+  };
+  const trovate = tutte
+    .map((x) => ({ x, p: punteggio(x) }))
+    .filter((v) => v.p != null)
+    .sort((a, b) => a.p - b.p || a.x.localeCompare(b.x, "it"))
+    .map((v) => v.x);
+  const nuova = testo.trim();
+  const esiste = tutte.some((x) => normalizza(x) === q);
+  return html`
+    ${trovate.map((x) => riga("stanza", x, html`<span class="riga-nome">${x}</span>`, "solo-testo"))}
+    ${nuova && !esiste ? riga("stanza", nuova, html`
+      <span class="riga-testo">
+        <span class="riga-nome">Aggiungi «${nuova}»</span>
+        <span class="riga-meta">Stanza nuova</span>
+      </span>`, "solo-testo nuova") : ""}`;
+}
+
+const CERCA = {
+  specie: { campo: "tipo", righe: suggerimentiSpecie, dopo: () => aggiornaAnteprima() },
+  stanza: { campo: "stanza", righe: suggerimentiStanza, dopo: () => {} },
+};
+
 /** Mostra (o nasconde) l'elenco sotto il campo, senza ridisegnare la pagina. */
-function mostraSuggerimenti(aperto = true) {
-  const campo = document.getElementById("specie");
-  const elenco = document.getElementById("specie-elenco");
-  if (!campo || !elenco) return;
-  if (aperto) elenco.innerHTML = String(suggerimenti(campo.value));
+function mostraSuggerimenti(nome, aperto = true) {
+  const campo = document.getElementById(nome);
+  const elenco = document.getElementById(`${nome}-elenco`);
+  if (!campo || !elenco || !CERCA[nome]) return;
+  if (aperto) elenco.innerHTML = String(CERCA[nome].righe(campo.value));
   const pieno = aperto && elenco.children.length > 0;
   elenco.hidden = !pieno;
   campo.setAttribute("aria-expanded", String(pieno));
@@ -145,19 +173,14 @@ export function render(s, { rotta }) {
     ${barra({ indietro: "Annulla", href, titolo: modifica ? "Modifica pianta" : "Nuova pianta" })}
     <form class="editor" id="form-pianta" novalidate>
       ${foto(b, "copertina")}
-      ${sceltaSpecie(b)}
+      ${campoCerca({ nome: "specie", etichetta: "Specie", valore: b.tipo, segnaposto: "Cerca: Monstera, Ficus, Sansevieria…", iconaCampo: "sprout" })}
 
       <label class="campo" id="campo-nome">
         <span>Nome</span>
         <input type="text" data-input="bozza" data-campo="nome" value="${b.nome}" maxlength="60"
           placeholder="Es. Monstera deliciosa" autocomplete="off" autocapitalize="sentences" required>
       </label>
-      <label class="campo" id="campo-stanza">
-        <span>Stanza</span>
-        <input type="text" data-input="bozza" data-campo="stanza" value="${b.stanza}" maxlength="40" list="stanze"
-          placeholder="Es. Salotto, Camera" autocomplete="off" autocapitalize="sentences" required>
-        <datalist id="stanze">${stanze().filter((x) => x !== "Da sistemare").map((x) => html`<option value="${x}"></option>`)}</datalist>
-      </label>
+      ${campoCerca({ nome: "stanza", etichetta: "Stanza", valore: b.stanza, segnaposto: "Es. Salotto, Camera", maiuscole: "sentences" })}
       <label class="campo">
         <span>Vaso <small>facoltativo</small></span>
         <input type="text" data-input="bozza" data-campo="vaso" value="${b.vaso}" maxlength="80"
@@ -168,8 +191,8 @@ export function render(s, { rotta }) {
         <legend>Substrato</legend>
         <div class="chips" role="radiogroup" aria-label="Substrato">
           ${[["terra", "Terra"], ["idroponica", "Idroponica"]].map(([v, nome]) => html`
-            <button class="chip" type="button" role="radio" aria-checked="${String(b.substrato === v)}" data-azione="substrato" data-valore="${v}">
-              ${b.substrato === v ? icona("check", 15, 2.6) : ""}${nome}
+            <button class="chip substrato-chip ${v}" type="button" role="radio" aria-checked="${String(b.substrato === v)}" data-azione="substrato" data-valore="${v}">
+              ${icona(v === "terra" ? "vaso" : "glass", 18, 2.1)}${nome}
             </button>`)}
         </div>
       </fieldset>
@@ -309,16 +332,18 @@ async function salva() {
 }
 
 export const azioni = {
-  "specie-scegli": (el) => {
-    bozza.tipo = el.dataset.valore;
-    if (!bozza.nome.trim()) bozza.nome = el.dataset.valore;
-    document.getElementById("specie")?.blur();
+  "cerca-scegli": (el) => {
+    const nome = el.dataset.cerca;
+    bozza[CERCA[nome].campo] = el.dataset.valore;
+    if (nome === "specie" && !bozza.nome.trim()) bozza.nome = el.dataset.valore;
+    document.getElementById(nome)?.blur();
     aggiorna({});
   },
-  "specie-svuota": () => {
-    bozza.tipo = "";
+  "cerca-svuota": (el) => {
+    const nome = el.dataset.nome;
+    bozza[CERCA[nome].campo] = "";
     aggiorna({});
-    document.getElementById("specie")?.focus(); // dentro il tocco: su iPhone si apre la tastiera
+    document.getElementById(nome)?.focus(); // dentro il tocco: su iPhone si apre la tastiera
   },
   substrato: (el) => {
     bozza.substrato = el.dataset.valore;
@@ -358,11 +383,12 @@ export const azioni = {
 };
 
 export const input = {
-  specie: (el) => {
-    if (!bozza) return;
-    bozza.tipo = el.value;
-    mostraSuggerimenti(true);
-    aggiornaAnteprima();
+  cerca: (el) => {
+    const c = CERCA[el.dataset.cerca];
+    if (!bozza || !c) return;
+    bozza[c.campo] = el.value;
+    mostraSuggerimenti(el.dataset.cerca, true);
+    c.dopo();
   },
   bozza: (el) => {
     if (bozza) bozza[el.dataset.campo] = el.value;
@@ -382,17 +408,18 @@ export const input = {
   },
 };
 
-/** Il campo Specie: elenco aperto quando lo tocchi, chiuso quando esci; Invio sceglie il primo, Esc chiude. */
-export const campoSpecie = {
-  apri: () => mostraSuggerimenti(true),
-  chiudi: () => mostraSuggerimenti(false),
+/** Campi con ricerca: elenco aperto quando li tocchi, chiuso quando esci; Invio sceglie il primo, Esc chiude. */
+export const ricerca = {
+  apri: (nome) => mostraSuggerimenti(nome, true),
+  chiudi: (nome) => mostraSuggerimenti(nome, false),
   tasto: (e) => {
+    const nome = e.target.dataset.cerca;
     if (e.key === "Escape") {
-      mostraSuggerimenti(false);
+      mostraSuggerimenti(nome, false);
       e.target.blur();
     } else if (e.key === "Enter") {
       e.preventDefault();
-      document.querySelector("#specie-elenco .suggerimento")?.click();
+      document.querySelector(`#${nome}-elenco .suggerimento`)?.click();
     }
   },
 };

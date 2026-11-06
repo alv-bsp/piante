@@ -627,9 +627,9 @@
 .editor .foto.copertina img { padding: 6% 10% 0; }
 .gruppo { min-width: 0; margin: 0; padding: 0; border: 0; }
 .gruppo legend { padding: 0; margin-bottom: var(--s2); font-size: var(--t-sm); font-weight: 650; }
-/* Campo Specie con ricerca: l'elenco si apre sotto il campo, sopra il resto del form. */
-.cerca-specie { position: relative; }
-.cerca-specie > label { font-size: var(--t-sm); font-weight: 650; }
+/* Campi con ricerca (Specie, Stanza): l'elenco si apre sotto il campo, sopra il resto del form. */
+.cerca { position: relative; }
+.cerca > label { font-size: var(--t-sm); font-weight: 650; }
 .cerca-riga {
   display: flex;
   align-items: center;
@@ -693,6 +693,8 @@
 .suggerimento .foto { display: block; width: 44px; height: 44px; }
 .suggerimento .foto.senza-foto { display: grid; }
 .suggerimento.nuova .riga-nome { color: var(--accento-chiaro); }
+.suggerimento.solo-testo { min-height: 48px; padding: 8px 14px; }
+.suggerimento.solo-testo .riga-nome { white-space: normal; }
 .passo { display: flex; align-items: center; gap: var(--s3); padding: 6px 0; }
 .passo-etichetta { flex: 1; font-size: var(--t-md); }
 .passo-valore { display: flex; align-items: baseline; gap: 6px; color: var(--ink-2); font-size: var(--t-sm); }
@@ -1145,3 +1147,24 @@ option { background: #1a3419; color: #fff; }
 @keyframes livello-entra { from { transform: translateY(calc(var(--pieno) * 1px)); } }
 /* Vuoto ed è ora di controllarla: il bordo si accende di verde. */
 .icona-btn.goccia.asciutta { border-color: rgba(63, 224, 111, .6); color: var(--accento-chiaro); }
+
+/* ───────── Terra o idroponica: un'etichetta colorata con l'icona ───────── */
+.substrato {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0;
+  padding: 1px 8px 1px 6px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.substrato.terra { background: rgba(214, 140, 90, .2); color: #f2bd93; }
+.substrato.idroponica { background: rgba(56, 189, 248, .18); color: #8fdcfd; }
+.riga-info { margin-left: 6px; }
+.righe dd .substrato { margin: 0; font-size: 13px; }
+.substrato-chip.terra:not([aria-checked="true"]) svg { color: #f2bd93; }
+.substrato-chip.idroponica:not([aria-checked="true"]) svg { color: #8fdcfd; }

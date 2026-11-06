@@ -17,7 +17,8 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
   **Bagnata** e **Ancora umida** (idroponica: **Rabboccata** e **Livello ok**; con un concime da sciogliere
   nell'acqua il pulsante diventa **Con concime**), poi **Da concimare**. Tocca un altro giorno: nel futuro vedi le
   scadenze previste (si spostano se bagni prima o dopo), nel passato quello che hai fatto (ultimi due mesi).
-- **Casa**: tutte le piante divise per stanza, con la foto della specie, l'ultima annaffiatura e una goccia per segnarla al volo.
+- **Casa**: tutte le piante divise per stanza, con la foto della specie, un'etichetta Terra (vaso marrone) o
+  Idroponica (bicchiere azzurro), l'ultima annaffiatura e una goccia per segnarla al volo.
   Il cerchio della goccia (del bicchiere, per l'idroponica) fa anche da livello: pieno d'acqua il giorno in cui bagni,
   si svuota giorno dopo giorno fino al controllo, quando resta vuoto con il bordo verde. Dopo "Ancora umida" risale a
   un terzo. Una pianta mai segnata parte vuota.
@@ -31,7 +32,8 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
 - **Foto**: una foto per specie, scontornata e messa su un fondo giallo pastello uguale per tutte (17 specie, in
   `public/specie/`). Nel modulo la specie si cerca scrivendo: compaiono quelle che corrispondono, anche per nome
   comune ("lingua di suocera", "uccello del paradiso"). Se non c'è, l'ultima riga la aggiunge com'è, senza foto: al
-  suo posto un germoglio disegnato. Le piante già salvate la ricavano da tipo e nome, quindi "Ficus", "Ficus lyrata"
+  suo posto un germoglio disegnato. La stanza funziona allo stesso modo, solo testo: scegli una di quelle che hai
+  o scrivine una nuova. Le piante già salvate la ricavano da tipo e nome, quindi "Ficus", "Ficus lyrata"
   e "ficus lirata" danno la stessa foto; un tipo nuovo come "Ficus pumila" invece resta senza.
 - Ogni azione si può annullare dal messaggio che compare in basso.
 

@@ -2,7 +2,7 @@ import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { livelloAcqua } from "../ui/livello.js";
 import { inOrdine, cicliDi } from "../stato.js";
-import { testata, vuoto, contaPiante, statoBreve, concimeBreve, verbi, dettagli, miniatura } from "./comuni.js";
+import { testata, vuoto, contaPiante, statoBreve, concimeBreve, verbi, dettagli, miniatura, substrato } from "./comuni.js";
 
 export const titolo = "Casa";
 export const conTabbar = true;
@@ -74,7 +74,7 @@ function riga({ pianta: p, stato: st }) {
         ${miniatura(p)}
         <span class="riga-testo">
           <span class="riga-nome">${p.nome}</span>
-          ${info ? html`<span class="riga-meta">${info}</span>` : ""}
+          <span class="riga-meta">${substrato(p)}${info ? html`<span class="riga-info">${info}</span>` : ""}</span>
           <span class="riga-stato ${st.daControllare ? "scaduta" : ""}">${statoBreve(p, st)}</span>
           ${concime ? html`<span class="riga-stato concime">${concime}</span>` : ""}
         </span>
