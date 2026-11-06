@@ -6,7 +6,7 @@ import { SPECIE, fotoSpecie } from "../specie.js";
 export function render() {
   return html`
     <main class="accesso">
-      <div class="foto copertina"><img src="${fotoSpecie(SPECIE[2], "copertina")}" alt="" decoding="async"></div>
+      <div class="foto copertina"><img src="${fotoSpecie(SPECIE.find((s) => s.nome === "Monstera deliciosa"), "copertina")}" alt="" decoding="async"></div>
       <div class="accesso-testa">
         <h1>Le tue piante,<br>senza pensarci</h1>
         <p>Quando bagnarle, quando concimarle. Accedi per iniziare.</p>

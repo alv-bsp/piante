@@ -28,9 +28,11 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
   i dettagli e lo storico (una voce sbagliata si cancella).
 - **Diario**: foto tue, ognuna con la sua data (anche passata) e una nota, per vedere come cresce. Le foto si
   rimpiccioliscono sul telefono prima di partire e finiscono nel bucket privato `piante`.
-- **Foto**: una foto generica per specie, scelta in `src/specie.js` e servita dal CDN di Unsplash. Nel modulo si
-  sceglie la specie tra quelle note (o "Altra", con il tipo scritto a mano); le piante già salvate la ricavano da
-  tipo e nome, quindi "Ficus", "Ficus lyrata" e "ficus lirata" danno la stessa foto.
+- **Foto**: una foto per specie, scontornata e messa su un fondo giallo pastello uguale per tutte (17 specie, in
+  `public/specie/`). Nel modulo la specie si cerca scrivendo: compaiono quelle che corrispondono, anche per nome
+  comune ("lingua di suocera", "uccello del paradiso"). Se non c'è, l'ultima riga la aggiunge com'è, senza foto: al
+  suo posto un germoglio disegnato. Le piante già salvate la ricavano da tipo e nome, quindi "Ficus", "Ficus lyrata"
+  e "ficus lirata" danno la stessa foto; un tipo nuovo come "Ficus pumila" invece resta senza.
 - Ogni azione si può annullare dal messaggio che compare in basso.
 
 Regole (in `supabase/functions/_shared/scadenze.js`, le stesse per app e notifiche):
@@ -98,7 +100,7 @@ npm test                     # regole delle scadenze, cifratura e firma delle no
 - Login solo con email e password, registrazioni chiuse (impostazioni del progetto dell'Armadio).
 - RLS attiva su tutte le tabelle: ogni riga è visibile e modificabile solo dal proprietario. Una cura è valida solo se
   la pianta è tua. Chi non ha fatto login non vede niente.
-- Le foto delle specie arrivano da `images.unsplash.com`: Unsplash vede le richieste delle immagini, nient'altro.
+- Le foto delle specie sono file dell'app (`public/specie/`): nessuna richiesta a servizi esterni.
 - Le foto del diario stanno nel bucket privato `piante`, in una cartella per utente, e si vedono con URL firmati
   a tempo. Le colonne `foto`/`miniatura` di `piante` restano dalla versione con la foto personale e non sono usate.
 - La funzione `promemoria` è pubblicata senza verifica JWT del gateway e si autorizza da sola: il cron con
@@ -130,7 +132,9 @@ src/main.js                        avvio, sessione, router, azioni
 src/stato.js                       stato in memoria
 src/dati.js                        letture e scritture su Supabase
 src/notifiche.js                   permesso, iscrizione push, prova, badge
-src/specie.js                      specie note, regole per riconoscerle, foto Unsplash
+src/specie.js                      specie note, regole e nomi comuni per riconoscerle, ricerca, foto
+public/specie/                     foto scontornate delle specie (WebP trasparenti, grande e mini)
+scripts/specie/                    come sono state scontornate (rembg, Python)
 src/partenza.js                    le piante di partenza, con i loro cicli di concime
 src/tempo.js                       date in parole
 src/foto.js                        foto del diario: ridimensiona, carica, URL firmati
@@ -166,8 +170,11 @@ test/                              node --test
 - **Concime nell'acqua alla prossima annaffiatura**: concimare un vaso col terriccio ancora umido non ha senso, quindi
   il Compo non ti chiama da solo, si aggancia all'annaffiatura.
 - **Foto per specie, non per pianta**: belle, uniformi e senza fatica. Prese da Unsplash (licenza libera, solo foto
-  non Unsplash+), scelte a mano tra quelle con una pianta sola e un fondo pulito. Restano sul loro CDN, che le ritaglia
-  alla misura giusta (`fotoSpecie()`); se un giorno una sparisce, al suo posto resta il riquadro di vetro.
+  non Unsplash+), scelte a mano tra quelle con la pianta intera, poi scontornate in locale con rembg (modelli
+  IS-Net e U2-Net, SAM con un riquadro dove c'erano mani o vasi bianchi su fondo bianco; vedi `scripts/specie/`).
+  Il fondo non è nelle immagini ma nel CSS, così cambiarlo è una riga. Dove le mani coprivano il vaso, la foto è
+  tagliata dritta in basso e la pianta poggia sul bordo del riquadro. 1,6 MB in tutto, servite dall'app stessa:
+  niente CDN esterno, e la foto che vola dall'elenco alla scheda è già in cache.
 - **Nuovo stile, stessa UX**: le schermate e i flussi sono quelli di prima; cambiano colori, superfici, tipografia e la
   barra in basso (cerchi: Calendario, Casa, Aggiungi, Account).
 - **Calendario al posto di Oggi, in una pagina sola**: oggi resta in cima e selezionato, quindi l'uso di tutti i
@@ -183,5 +190,5 @@ test/                              node --test
 ## Licenze
 
 Plus Jakarta Sans: SIL Open Font License 1.1 (`src/assets/OFL-PlusJakartaSans.txt`). Icone: Lucide, licenza ISC.
-Foto: Unsplash, licenza Unsplash (https://unsplash.com/license). Gli id delle foto sono in `src/specie.js`; ogni foto
-si apre su `https://images.unsplash.com/photo-<id>`.
+Foto: Unsplash, licenza Unsplash (https://unsplash.com/license), scontornate. Gli id delle originali sono in
+`src/specie.js` (campo `unsplash`); ogni foto si apre su `https://images.unsplash.com/photo-<id>`.

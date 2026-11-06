@@ -110,8 +110,6 @@
   color: var(--su-accento);
 }
 .chip[aria-pressed="true"] svg, .chip[aria-checked="true"] svg { color: var(--su-accento); }
-.chip.con-foto { padding-left: 4px; }
-.chip.con-foto img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
 
 /* ───────── Campi ───────── */
 .campo { display: grid; gap: 8px; }
@@ -197,23 +195,24 @@
   background: linear-gradient(to bottom, rgba(13, 29, 15, 0), rgba(13, 29, 15, .85));
 }
 
-/* ───────── Foto delle specie ───────── */
+/* ───────── Foto delle specie ─────────
+   Scontornate (public/specie/), tutte sullo stesso fondo giallo pastello con una luce morbida in alto.
+   La pianta poggia sul bordo in basso (object-position) e il padding le lascia aria: nelle carte sopra
+   l'etichetta, nel ritratto sopra la mascotte. */
 .foto {
   position: relative;
   flex: none;
   overflow: hidden;
-  background: rgba(255, 255, 255, .06);
+  background: radial-gradient(120% 95% at 50% 25%, #fffbec 0%, #faf0c8 52%, #f2e3ab 100%);
 }
-.foto img { width: 100%; height: 100%; object-fit: cover; }
+.foto img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; padding: 8% 8% 0; }
 .foto.mini { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--vetro-bordo); }
+.foto.mini img { padding: 13%; object-position: 50% 50%; }
 .foto.copertina { width: 100%; aspect-ratio: 5 / 4; max-height: 52dvh; border-radius: var(--r-lg); }
-.foto.copertina::after, .carta-foto .foto::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(10, 24, 12, 0) 35%, rgba(10, 24, 12, .8));
-  pointer-events: none;
-}
+.carta-foto .foto img { padding: 6% 12% 70px; }
+.foto.senza-foto { display: grid; place-items: center; color: rgba(46, 81, 36, .4); }
+.foto.senza-foto svg { width: 36%; height: 36%; }
+.carta-foto .foto.senza-foto svg { margin-bottom: 56px; }
 .copertina-blocco { position: relative; margin-bottom: var(--s4); }
 .etichetta-foto {
   position: absolute;
@@ -226,7 +225,7 @@
   padding: 12px 12px 12px 18px;
   border: 1px solid var(--vetro-bordo);
   border-radius: var(--r-md);
-  background: rgba(14, 32, 16, .45);   /* scuro abbastanza da tenere leggibile il testo anche sulle foto chiare */
+  background: rgba(14, 32, 16, .74);   /* scuro abbastanza da tenere leggibile il testo bianco sul fondo giallo */
 }
 .etichetta-foto .riga-testo { flex: 1; }
 .etichetta-nome { font-size: var(--t-lg); font-weight: 750; letter-spacing: -.02em; line-height: 1.2; }
@@ -625,18 +624,75 @@
 /* ───────── Editor ───────── */
 .editor { display: grid; gap: var(--s5); }
 .editor .foto.copertina { aspect-ratio: 16 / 10; }
+.editor .foto.copertina img { padding: 6% 10% 0; }
 .gruppo { min-width: 0; margin: 0; padding: 0; border: 0; }
 .gruppo legend { padding: 0; margin-bottom: var(--s2); font-size: var(--t-sm); font-weight: 650; }
-.scelta-specie {
+/* Campo Specie con ricerca: l'elenco si apre sotto il campo, sopra il resto del form. */
+.cerca-specie { position: relative; }
+.cerca-specie > label { font-size: var(--t-sm); font-weight: 650; }
+.cerca-riga {
   display: flex;
-  gap: 8px;
-  margin: 0 calc(-1 * var(--gutter));
-  padding: 4px var(--gutter) 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 7px 0 16px;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: var(--r-md);
+  background: var(--vetro);
+  -webkit-backdrop-filter: var(--sfoca);
+  backdrop-filter: var(--sfoca);
+  transition: border-color var(--dur) var(--ease);
 }
-.scelta-specie::-webkit-scrollbar { display: none; }
-.scelta-specie .chip { flex: none; }
+.cerca-riga:focus-within { border-color: var(--accento); }
+.cerca-riga > svg { color: var(--accento-chiaro); }
+.campo .cerca-riga input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  outline: none;
+}
+.suggerimenti {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  max-height: min(320px, 46dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  padding: 6px;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: var(--r-md);
+  background: rgba(16, 34, 18, .97);
+  box-shadow: var(--ombra);
+  animation: entra-su 220ms var(--ease);
+}
+.suggerimenti[hidden] { display: none; }
+.suggerimento {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 10px 6px 6px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--dur) var(--ease);
+}
+.suggerimento:active, .suggerimento:hover { background: var(--vetro-forte); }
+.suggerimento .foto { display: block; width: 44px; height: 44px; }
+.suggerimento .foto.senza-foto { display: grid; }
+.suggerimento.nuova .riga-nome { color: var(--accento-chiaro); }
 .passo { display: flex; align-items: center; gap: var(--s3); padding: 6px 0; }
 .passo-etichetta { flex: 1; font-size: var(--t-md); }
 .passo-valore { display: flex; align-items: baseline; gap: 6px; color: var(--ink-2); font-size: var(--t-sm); }
@@ -731,7 +787,8 @@ option { background: #1a3419; color: #fff; }
   background: linear-gradient(135deg, #d6f7a0, var(--accento) 55%, #1fbf8f);
   box-shadow: 0 18px 40px rgba(0, 0, 0, .35), 0 0 40px rgba(63, 224, 111, .25);
 }
-.ritratto-foto { width: 100%; aspect-ratio: 1; border-radius: 41px; background-size: cover; background-position: center; }
+.ritratto-foto { width: 100%; aspect-ratio: 1; border-radius: 41px; }
+.ritratto-foto img { padding: 9% 12% 18%; }   /* il vaso resta sopra la testa della mascotte */
 .ritratto-mascotte {
   position: absolute;
   left: 50%;

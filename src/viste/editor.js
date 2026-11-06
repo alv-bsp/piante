@@ -5,15 +5,13 @@ import { salvaPianta } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { toast } from "../ui/avvisi.js";
 import { giornoRoma, stagione, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { SPECIE, GENERICA, specieDi, fotoSpecie } from "../specie.js";
+import { cercaSpecie, fotoSpecie, specieDi } from "../specie.js";
 import { barra, vuoto, foto } from "./comuni.js";
 
 export const conTabbar = false;
 
 // La bozza vive qui finché non la salvi o esci. I campi di testo la aggiornano senza ridisegnare.
 let bozza = null;
-// "Altra" specie scelta a mano: mostra il campo del tipo anche se il nome corrisponde a una specie nota.
-let altraSpecie = false;
 
 const nuova = () => ({
   id: null,
@@ -59,33 +57,74 @@ const cicloNuovo = (b) => ({
   prodotto: "", ogni_giorni: 21, dal_mese: 3, al_mese: 9, con_acqua: !b.irrigazione_automatica, note: "",
 });
 
-/** Specie: decide la foto. Una scelta tra quelle note, oppure "Altra" con il tipo scritto a mano. */
+/**
+ * Specie: decide la foto. Un campo di ricerca: mentre scrivi, sotto compaiono le specie che corrispondono (con la
+ * foto), più quelle senza foto che hai già usato. Se non c'è, l'ultima riga la aggiunge com'è, senza foto.
+ * Mentre scrivi la pagina non si ridisegna (su iPhone si chiuderebbe la tastiera): cambia solo l'elenco.
+ */
 function sceltaSpecie(b) {
-  const attuale = specieDi(b);
-  // Pianta nuova e ancora vuota: nessuna scelta evidenziata, niente campo del tipo.
-  const altra = altraSpecie || (attuale === GENERICA && Boolean(`${b.tipo}${b.nome}`.trim()));
-  const inOrdine = [...SPECIE].sort((x, y) => x.nome.localeCompare(y.nome, "it"));
   return html`
-    <fieldset class="gruppo">
-      <legend>Specie</legend>
-      <div class="scelta-specie" role="radiogroup" aria-label="Specie">
-        ${inOrdine.map((sp) => html`
-          <button class="chip con-foto" type="button" role="radio" aria-checked="${String(!altra && sp === attuale)}"
-            data-azione="specie" data-valore="${sp.nome}">
-            <img src="${fotoSpecie(sp, "scelta")}" alt="" loading="lazy">${sp.nome}
-          </button>`)}
-        <button class="chip" type="button" role="radio" aria-checked="${String(altra)}" data-azione="specie" data-valore="">
-          ${icona("plus", 16)}Altra
-        </button>
+    <div class="campo cerca-specie" id="campo-specie">
+      <label for="specie"><span>Specie</span></label>
+      <div class="cerca-riga">
+        ${icona("sprout", 18)}
+        <input type="text" id="specie" data-input="specie" value="${b.tipo}" maxlength="40"
+          placeholder="Cerca: Monstera, Ficus, Sansevieria…" autocomplete="off" autocapitalize="words" spellcheck="false"
+          role="combobox" aria-expanded="false" aria-controls="specie-elenco" aria-autocomplete="list">
+        ${b.tipo ? html`<button class="icona-btn piccola" type="button" data-azione="specie-svuota" aria-label="Cancella la specie">${icona("x", 16)}</button>` : ""}
       </div>
-      ${altra ? html`
-        <label class="campo">
-          <span>Tipo <small>facoltativo</small></span>
-          <input type="text" data-input="bozza" data-campo="tipo" value="${b.tipo}" maxlength="40" list="tipi"
-            placeholder="Es. Calathea, Sansevieria" autocomplete="off" autocapitalize="words">
-          <datalist id="tipi">${tipi().map((t) => html`<option value="${t}"></option>`)}</datalist>
-        </label>` : ""}
-    </fieldset>`;
+      <ul class="suggerimenti" id="specie-elenco" role="listbox" aria-label="Specie" hidden></ul>
+    </div>`;
+}
+
+/** Le righe dei suggerimenti per il testo scritto. */
+function suggerimenti(testo) {
+  const { risultati, esiste } = cercaSpecie(testo, tipi());
+  const nuova = testo.trim();
+  // Una parola sola che è un genere noto ("Ficus") prende comunque la foto della specie: lo dico.
+  const trovata = nuova && specieDi({ tipo: nuova });
+  const conFoto = trovata?.file ? trovata : null;
+  return html`
+    ${risultati.slice(0, 30).map((r) => html`
+      <li role="option">
+        <button class="suggerimento" type="button" data-azione="specie-scegli" data-valore="${r.nome}">
+          ${r.specie
+            ? html`<span class="foto mini"><img src="${fotoSpecie(r.specie, "mini")}" alt="" loading="lazy"></span>`
+            : html`<span class="foto mini senza-foto">${icona("sprout", 20, 1.6)}</span>`}
+          <span class="riga-testo">
+            <span class="riga-nome">${r.nome}</span>
+            ${r.specie ? "" : html`<span class="riga-meta">Senza foto</span>`}
+          </span>
+        </button>
+      </li>`)}
+    ${nuova && !esiste ? html`
+      <li role="option">
+        <button class="suggerimento nuova" type="button" data-azione="specie-scegli" data-valore="${nuova}">
+          <span class="foto mini senza-foto">${icona("plus", 20, 2)}</span>
+          <span class="riga-testo">
+            <span class="riga-nome">Aggiungi «${nuova}»</span>
+            <span class="riga-meta">${conFoto ? `Con la foto di ${conFoto.nome}` : "Specie nuova, senza foto"}</span>
+          </span>
+        </button>
+      </li>` : ""}`;
+}
+
+/** Mostra (o nasconde) l'elenco sotto il campo, senza ridisegnare la pagina. */
+function mostraSuggerimenti(aperto = true) {
+  const campo = document.getElementById("specie");
+  const elenco = document.getElementById("specie-elenco");
+  if (!campo || !elenco) return;
+  if (aperto) elenco.innerHTML = String(suggerimenti(campo.value));
+  const pieno = aperto && elenco.children.length > 0;
+  elenco.hidden = !pieno;
+  campo.setAttribute("aria-expanded", String(pieno));
+  if (pieno) elenco.scrollTop = 0;
+}
+
+/** Aggiorna la foto in cima al form, senza ridisegnare (il campo resta com'è, con la tastiera aperta). */
+function aggiornaAnteprima() {
+  const vecchia = document.querySelector("#form-pianta > .foto");
+  if (vecchia && bozza) vecchia.outerHTML = String(foto(bozza, "copertina"));
 }
 
 export function render(s, { rotta }) {
@@ -95,13 +134,9 @@ export function render(s, { rotta }) {
     if (s.piante == null) return html`${barra({ indietro: "Annulla", href: "#/casa" })}<p class="nota">Carico…</p>`;
     const p = trovaPianta(id);
     if (!p) return html`${barra({ indietro: "Casa", href: "#/casa" })}${vuoto({ icona: "sprout", titolo: "Pianta non trovata", testo: "Forse è stata eliminata." })}`;
-    if (bozza?.id !== id) {
-      bozza = daPianta(p);
-      altraSpecie = false;
-    }
+    if (bozza?.id !== id) bozza = daPianta(p);
   } else if (!bozza || bozza.id) {
     bozza = nuova();
-    altraSpecie = false;
   }
 
   const b = bozza;
@@ -274,17 +309,16 @@ async function salva() {
 }
 
 export const azioni = {
-  specie: (el) => {
-    const nome = el.dataset.valore;
-    if (!nome) {
-      altraSpecie = true;
-      if (SPECIE.some((sp) => sp.nome === bozza.tipo)) bozza.tipo = "";
-    } else {
-      altraSpecie = false;
-      bozza.tipo = nome;
-      if (!bozza.nome.trim()) bozza.nome = nome;
-    }
+  "specie-scegli": (el) => {
+    bozza.tipo = el.dataset.valore;
+    if (!bozza.nome.trim()) bozza.nome = el.dataset.valore;
+    document.getElementById("specie")?.blur();
     aggiorna({});
+  },
+  "specie-svuota": () => {
+    bozza.tipo = "";
+    aggiorna({});
+    document.getElementById("specie")?.focus(); // dentro il tocco: su iPhone si apre la tastiera
   },
   substrato: (el) => {
     bozza.substrato = el.dataset.valore;
@@ -324,6 +358,12 @@ export const azioni = {
 };
 
 export const input = {
+  specie: (el) => {
+    if (!bozza) return;
+    bozza.tipo = el.value;
+    mostraSuggerimenti(true);
+    aggiornaAnteprima();
+  },
   bozza: (el) => {
     if (bozza) bozza[el.dataset.campo] = el.value;
   },
@@ -342,8 +382,22 @@ export const input = {
   },
 };
 
+/** Il campo Specie: elenco aperto quando lo tocchi, chiuso quando esci; Invio sceglie il primo, Esc chiude. */
+export const campoSpecie = {
+  apri: () => mostraSuggerimenti(true),
+  chiudi: () => mostraSuggerimenti(false),
+  tasto: (e) => {
+    if (e.key === "Escape") {
+      mostraSuggerimenti(false);
+      e.target.blur();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      document.querySelector("#specie-elenco .suggerimento")?.click();
+    }
+  },
+};
+
 /** Annulla quando si esce dal form senza salvare. */
 export function abbandona() {
   bozza = null;
-  altraSpecie = false;
 }

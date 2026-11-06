@@ -194,6 +194,15 @@ document.addEventListener("input", (e) => {
   if (f) f(e.target);
 });
 
+// Campo Specie dell'editor: l'elenco dei suggerimenti si apre e si chiude con il fuoco. Toccare un suggerimento
+// non toglie il fuoco al campo (preventDefault), così su iPhone la tastiera non si chiude a metà tocco.
+document.addEventListener("focusin", (e) => { if (e.target.id === "specie") editor.campoSpecie.apri(); });
+document.addEventListener("focusout", (e) => { if (e.target.id === "specie") editor.campoSpecie.chiudi(); });
+document.addEventListener("keydown", (e) => { if (e.target.id === "specie") editor.campoSpecie.tasto(e); });
+for (const tipo of ["pointerdown", "mousedown"]) {
+  document.addEventListener(tipo, (e) => { if (e.target.closest?.(".suggerimenti")) e.preventDefault(); });
+}
+
 document.addEventListener("change", (e) => {
   if (e.target.dataset?.azioneChange === "ora") account.cambiaOra(e.target);
   if (e.target.dataset?.spunta) stanza.aggiornaConteggio();
@@ -278,7 +287,8 @@ document.addEventListener("pointerdown", (e) => {
   const a = e.target.closest?.('a[href^="#/pianta/"]');
   const id = a?.getAttribute("href").split("/")[2];
   const p = id && stato.piante?.find((x) => x.id === id);
-  if (p) new Image().src = fotoSpecie(specieDi(p), "copertina");
+  const src = p && fotoSpecie(specieDi(p), "copertina");
+  if (src) new Image().src = src;
 }, { passive: true });
 
 // Swipe orizzontale sulla griglia del calendario: mese dopo o prima. (Il listener sul documento abilita anche

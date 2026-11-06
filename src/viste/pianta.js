@@ -105,7 +105,7 @@ export function render(s, { rotta, avviso = "" }) {
       </div>
 
       <div class="ritratto">
-        <div class="ritratto-cornice">${foto(p, "copertina", "ritratto-foto", { segnaposto: true })}</div>
+        <div class="ritratto-cornice">${foto(p, "copertina", "ritratto-foto")}</div>
         <button class="ritratto-mascotte" type="button" data-azione="mascotte" data-umore="${f.umore}" aria-label="Coccola ${p.nome}">
           ${mascotte(f.umore, 112, { salta: cambiato })}
         </button>
