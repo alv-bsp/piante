@@ -1168,3 +1168,61 @@ option { background: #1a3419; color: #fff; }
 .righe dd .substrato { margin: 0; font-size: 13px; }
 .substrato-chip.terra:not([aria-checked="true"]) svg { color: #f2bd93; }
 .substrato-chip.idroponica:not([aria-checked="true"]) svg { color: #8fdcfd; }
+
+/* ───────── Concime consigliato dalla specie (editor e scheda) ───────── */
+.consiglio-concime { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-bottom: var(--s3); }
+.consiglio-concime p { display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--ink-2); }
+.consiglio-concime p svg { color: var(--accento-chiaro); }
+.consiglio-concime b { color: var(--ink); }
+.consiglio-concime .chip { min-height: 36px; padding: 0 12px; }
+.consiglio-scheda { display: grid; gap: var(--s3); padding: 14px 16px 16px; }
+.consiglio-scheda b { color: var(--ink); }
+.consiglio-cicli { list-style: none; display: grid; gap: 8px; }
+.consiglio-cicli li { display: grid; gap: 2px; }
+.consiglio-cicli .riga-nome { white-space: normal; }
+
+/* ───────── Account › Specie ───────── */
+.riga-specie { display: flex; align-items: center; gap: var(--s3); min-height: 60px; padding: 8px 0; }
+.riga-specie .foto.mini { display: block; width: 40px; height: 40px; }
+.scelta-concime {
+  flex: none;
+  max-width: 48%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: var(--r-pill);
+  background: var(--vetro);
+  color: var(--ink);
+  font-size: var(--t-xs);
+  font-weight: 650;
+}
+.nuova-specie { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--s2); }
+.nuova-specie input {
+  flex: 1 1 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--vetro-bordo);
+  border-radius: var(--r-md);
+  background: var(--vetro);
+  color: var(--ink);
+  font-size: var(--t-md);
+}
+.nuova-specie input:focus { border-color: var(--accento); }
+.nuova-specie .scelta-concime { flex: 1; max-width: none; height: 40px; }
+.nuova-specie .btn { flex: none; }
+.specie-note summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch);
+  margin-top: var(--s2);
+  color: var(--accento-chiaro);
+  font-size: var(--t-sm);
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+.specie-note summary::-webkit-details-marker { display: none; }
+.specie-note summary svg { transition: transform var(--dur) var(--ease); }
+.specie-note[open] summary svg { transform: rotate(90deg); }

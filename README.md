@@ -33,7 +33,14 @@ lo stile è suo: verde profondo, superfici in vetro, un solo accento verde acces
   `public/specie/`). Nel modulo la specie si cerca scrivendo: compaiono quelle che corrispondono, anche per nome
   comune ("lingua di suocera", "uccello del paradiso"). Se non c'è, l'ultima riga la aggiunge com'è, senza foto: al
   suo posto un germoglio disegnato. La stanza funziona allo stesso modo, solo testo: scegli una di quelle che hai
-  o scrivine una nuova. Le piante già salvate la ricavano da tipo e nome, quindi "Ficus", "Ficus lyrata"
+  o scrivine una nuova.
+- **Concime dalla specie**: scegliendo la specie, l'editor compila da solo il concime (`src/concimi.js`): piante
+  verdi (Compo, ogni 21–28 giorni da marzo a settembre), fiorite, succulente, agrumi, alberi da frutto; in
+  idroponica il concime da idrocoltura nel rabbocco. Resta modificabile; se lo cambi, "Usa il consigliato" lo
+  rimette. Una pianta senza concime, nella scheda, propone quello della sua specie con un tocco.
+- **Account › Specie**: le specie che hai aggiunto tu, ognuna con il suo programma di concime (cambiabile).
+  Si aggiungono da lì o dall'editor ("Aggiungi «…»"); eliminandone una, le sue piante restano senza specie.
+  Sotto, l'elenco delle specie con la foto e il loro concime. Le piante già salvate la ricavano da tipo e nome, quindi "Ficus", "Ficus lyrata"
   e "ficus lirata" danno la stessa foto; un tipo nuovo come "Ficus pumila" invece resta senza.
 - Ogni azione si può annullare dal messaggio che compare in basso.
 
@@ -86,6 +93,7 @@ Le installazioni esistenti eseguono nel SQL Editor i file di `supabase/modifiche
 sola (`schema.sql` li contiene già):
 
 - `2026-11-05-diario.sql`: tabella del diario delle foto.
+- `2026-11-06-specie.sql`: tabella delle specie aggiunte da te.
 
 ## Sviluppo in locale
 
@@ -135,6 +143,7 @@ src/stato.js                       stato in memoria
 src/dati.js                        letture e scritture su Supabase
 src/notifiche.js                   permesso, iscrizione push, prova, badge
 src/specie.js                      specie note, regole e nomi comuni per riconoscerle, ricerca, foto
+src/concimi.js                     programmi di concime e quale usare per ogni specie
 public/specie/                     foto scontornate delle specie (WebP trasparenti, grande e mini)
 scripts/specie/                    come sono state scontornate (rembg, Python)
 src/partenza.js                    le piante di partenza, con i loro cicli di concime

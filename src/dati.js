@@ -6,6 +6,7 @@ import { aggiungiGiorni, giornoRoma } from "../supabase/functions/_shared/scaden
 const CAMPI_PIANTA = "id, nome, tipo, stanza, vaso, substrato, giorni_estate, giorni_inverno, irrigazione_automatica, note, archiviata_il, creata_il, modificata_il";
 const CAMPI_CICLO = "id, pianta_id, prodotto, ogni_giorni, dal_mese, al_mese, con_acqua, note, creato_il";
 const CAMPI_CURA = "id, pianta_id, tipo, ciclo_id, prodotto, il";
+const CAMPI_SPECIE = "id, nome, concime";
 
 /** Cicli raggruppati per pianta, in ordine di mese di inizio. */
 function perPianta(cicli) {
@@ -22,13 +23,14 @@ function perPianta(cicli) {
 export async function caricaTutto() {
   aggiorna({ caricamento: true, errore: null });
   const da = new Date(`${aggiungiGiorni(giornoRoma(), -62)}T00:00:00Z`).toISOString();
-  const [piante, ultime, cicli, concimazioni, promemoria, recenti] = await Promise.all([
+  const [piante, ultime, cicli, concimazioni, promemoria, recenti, mie] = await Promise.all([
     sb.from("piante").select(CAMPI_PIANTA).order("nome"),
     sb.from("ultime_cure").select("pianta_id, ultima_bagnata, ultimo_controllo"),
     sb.from("cicli_concime").select(CAMPI_CICLO),
     sb.from("ultime_concimazioni").select("ciclo_id, ultima"),
     sb.from("promemoria").select("ora").maybeSingle(),
     sb.from("cure").select(CAMPI_CURA).gte("il", da).order("il", { ascending: false }).limit(1000),
+    sb.from("specie_mie").select(CAMPI_SPECIE).order("nome"),
   ]);
   const risposte = [piante, ultime, cicli, concimazioni, promemoria];
   const primoErrore = risposte.find((r) => r.error)?.error;
@@ -50,7 +52,54 @@ export async function caricaTutto() {
     ultimeConcime: concimazioni.error ? stato.ultimeConcime : new Map(concimazioni.data.map((u) => [u.ciclo_id, u.ultima])),
     ora: promemoria.data?.ora ?? stato.ora,
     cureRecenti: recenti.error ? stato.cureRecenti : recenti.data,
+    // Senza la tabella (migrazione 2026-11-06-specie.sql non ancora eseguita) l'app funziona lo stesso.
+    specieMie: mie.error ? stato.specieMie : mie.data,
+    specieMieOk: !mie.error,
   });
+}
+
+// ───────────────────────────── specie aggiunte da te
+
+/** Aggiunge una specie (con il suo programma di concime). Se c'è già, la restituisce com'è. */
+export async function aggiungiSpecie(nome, concime = "verdi") {
+  const pulito = nome.trim();
+  const gia = stato.specieMie.find((s) => s.nome.toLowerCase() === pulito.toLowerCase());
+  if (gia) return gia;
+  const { data, error } = await sb.from("specie_mie").insert({ nome: pulito, concime }).select(CAMPI_SPECIE).single();
+  if (error) throw error;
+  aggiorna({ specieMie: [...stato.specieMie, data].sort((a, b) => a.nome.localeCompare(b.nome, "it")) });
+  return data;
+}
+
+export async function cambiaConcimeSpecie(specie, concime) {
+  const { data, error } = await sb.from("specie_mie").update({ concime }).eq("id", specie.id).select(CAMPI_SPECIE).single();
+  if (error) throw error;
+  aggiorna({ specieMie: stato.specieMie.map((s) => (s.id === data.id ? data : s)) });
+}
+
+/**
+ * Elimina una specie: la riga (se c'è) e la specie dalle piante che la usavano, che restano senza.
+ * `nome` serve anche per le specie che esistono solo come tipo di una pianta, senza riga.
+ */
+export async function eliminaSpecie(nome) {
+  const chiave = nome.trim().toLowerCase();
+  const riga = stato.specieMie.find((s) => s.nome.toLowerCase() === chiave);
+  if (riga) {
+    const { error } = await sb.from("specie_mie").delete().eq("id", riga.id);
+    if (error) throw error;
+  }
+  const ids = (stato.piante || []).filter((p) => (p.tipo || "").trim().toLowerCase() === chiave).map((p) => p.id);
+  let aggiornate = [];
+  if (ids.length) {
+    const { data, error } = await sb.from("piante").update({ tipo: null }).in("id", ids).select(CAMPI_PIANTA);
+    if (error) throw error;
+    aggiornate = data;
+  }
+  aggiorna({
+    specieMie: stato.specieMie.filter((s) => s !== riga),
+    piante: stato.piante.map((p) => aggiornate.find((x) => x.id === p.id) || p),
+  });
+  return ids.length;
 }
 
 // ───────────────────────────── piante
@@ -125,6 +174,9 @@ async function salvaCicli(piantaId, cicli) {
     aggiorna({ cicli: mappa });
   }
 }
+
+/** Sostituisce i cicli di concime di una pianta (es. con quelli consigliati per la specie). */
+export const impostaCicli = (pianta, cicli) => salvaCicli(pianta.id, cicli);
 
 /** Aggiunge in un colpo le piante di partenza (vedi partenza.js), con i loro cicli di concime. */
 export async function aggiungiPiante(elenco) {

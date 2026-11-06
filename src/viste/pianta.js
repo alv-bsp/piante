@@ -1,7 +1,7 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { stato, aggiorna, trovaPianta, statoDi, cicliDi, concimeInAcqua } from "../stato.js";
-import { caricaStorico, annullaCure, archiviaPianta, caricaDiario, aggiungiAlDiario, eliminaDalDiario } from "../dati.js";
+import { caricaStorico, annullaCure, archiviaPianta, caricaDiario, aggiungiAlDiario, eliminaDalDiario, impostaCicli } from "../dati.js";
 import { preparaFoto, urlInCache, idrataFoto } from "../foto.js";
 import { specieDi } from "../specie.js";
 import { mascotte } from "../ui/mascotte.js";
@@ -10,7 +10,8 @@ import { sostituisci } from "../router.js";
 import { apriFoglio, chiudiFoglio, toast } from "../ui/avvisi.js";
 import { giornoBreve, quanto, traQuanto, quando } from "../tempo.js";
 import { rinvio, nelMese, conLAcqua, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { barra, vuoto, verbi, foto, statoCicloBreve, substrato } from "./comuni.js";
+import { barra, vuoto, verbi, foto, statoCicloBreve, substrato, regolaCiclo } from "./comuni.js";
+import { concimeConsigliato, programmaDi } from "../concimi.js";
 
 export const conTabbar = true;
 
@@ -235,7 +236,18 @@ function stagioneConcime(c, oggi) {
 
 function concime(p, tolta, cicli) {
   if (!cicli.length) {
-    return html`<p class="nota">Nessun concime impostato.${tolta ? "" : html` Aggiungilo da <a href="#/pianta/${p.id}/modifica">Modifica</a>.`}</p>`;
+    const consigliato = concimeConsigliato(p, stato.specieMie);
+    if (tolta || !consigliato.length) return html`<p class="nota">Nessun concime impostato.</p>`;
+    // Niente cicli: propongo quelli della specie, da aggiungere con un tocco.
+    const { nome } = programmaDi(p, stato.specieMie);
+    return html`
+      <div class="pannello consiglio-scheda">
+        <p class="riga-meta">Nessun concime impostato. Per questa specie: <b>${nome.toLowerCase()}</b></p>
+        <ul class="consiglio-cicli">${consigliato.map((c) => html`
+          <li><span class="riga-nome">${c.prodotto}</span><span class="riga-meta">${regolaCiclo(c, p)}${c.note ? ` · ${c.note}` : ""}</span></li>`)}
+        </ul>
+        <button class="btn primario largo" type="button" data-azione="usa-concime" data-id="${p.id}">${icona("flask", 18)}Usa questo concime</button>
+      </div>`;
   }
   return html`
     <div class="cicli">${cicli.map(({ ciclo: c, stato: cs }) => html`
@@ -380,6 +392,20 @@ const voceDi = (el) => stato.diario.get(el.dataset.id)?.find((v) => v.id === el.
 
 export const azioni = {
   mascotte: coccola,
+  "usa-concime": async (el) => {
+    const p = trovaPianta(el.dataset.id);
+    if (!p) return;
+    el.disabled = true;
+    try {
+      await impostaCicli(p, concimeConsigliato(p, stato.specieMie));
+      vibra();
+      toast("Concime impostato.");
+    } catch (e) {
+      console.error("concime", e);
+      el.disabled = false;
+      toast("Non sono riuscito a salvarlo. Riprova.");
+    }
+  },
   "diario-apri": (el) => {
     const p = trovaPianta(el.dataset.id);
     const v = voceDi(el);

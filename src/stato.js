@@ -17,6 +17,8 @@ export const stato = {
   storico: new Map(),     // pianta_id → ultime cure, caricate quando apri la scheda
   cureRecenti: [],        // cure degli ultimi due mesi di tutte le piante, per il calendario
   diario: new Map(),      // pianta_id → foto del diario di crescita, caricate quando apri la scheda
+  specieMie: [],          // specie aggiunte da te: { id, nome, concime } (tabella specie_mie)
+  specieMieOk: true,      // false se la tabella non c'è ancora (migrazione da eseguire)
   ora: 9,                 // ora del promemoria (Roma)
   notifiche: "verifico",  // verifico · attive · spente · bloccate · serve-home · non-supportate · da-configurare
   oggi: giornoRoma(),
@@ -35,7 +37,7 @@ export function ascolta(f) {
 export const azzeraDati = () =>
   aggiorna({
     piante: null, ultime: new Map(), cicli: new Map(), ultimeConcime: new Map(), storico: new Map(),
-    cureRecenti: [], diario: new Map(),
+    cureRecenti: [], diario: new Map(), specieMie: [], specieMieOk: true,
     errore: null, caricamento: false, ora: 9,
   });
 

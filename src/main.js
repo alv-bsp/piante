@@ -206,6 +206,7 @@ for (const tipo of ["pointerdown", "mousedown"]) {
 
 document.addEventListener("change", (e) => {
   if (e.target.dataset?.azioneChange === "ora") account.cambiaOra(e.target);
+  if (e.target.dataset?.azioneChange === "specie-concime") account.cambiaConcime(e.target);
   if (e.target.dataset?.spunta) stanza.aggiornaConteggio();
 });
 

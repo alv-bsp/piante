@@ -1,11 +1,12 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
 import { stato, aggiorna, trovaPianta, stanze, tipi, prodotti } from "../stato.js";
-import { salvaPianta } from "../dati.js";
+import { salvaPianta, aggiungiSpecie } from "../dati.js";
 import { sostituisci } from "../router.js";
 import { toast } from "../ui/avvisi.js";
 import { giornoRoma, stagione, MESI } from "../../supabase/functions/_shared/scadenze.js";
-import { cercaSpecie, fotoSpecie, specieDi, normalizza } from "../specie.js";
+import { cercaSpecie, fotoSpecie, specieDi, normalizza, GENERICA } from "../specie.js";
+import { concimeConsigliato, programmaDi, stessiCicli } from "../concimi.js";
 import { barra, vuoto, foto } from "./comuni.js";
 
 export const conTabbar = false;
@@ -24,6 +25,7 @@ const nuova = () => ({
   giorni_inverno: 14,
   irrigazione_automatica: false,
   cicli: [],           // cicli di concime: { id?, prodotto, ogni_giorni, dal_mese, al_mese, con_acqua, note }
+  cicliAuto: true,     // i cicli vengono dalla specie e non li hai toccati: cambiando specie si aggiornano
   note: "",
   ultimaVolta: giornoRoma(),
   salvataggio: false,
@@ -41,6 +43,7 @@ const daPianta = (p) => ({
   giorni_inverno: p.giorni_inverno,
   irrigazione_automatica: p.irrigazione_automatica,
   cicli: (stato.cicli.get(p.id) || []).map((c) => ({ ...c, note: c.note || "" })),
+  cicliAuto: !(stato.cicli.get(p.id) || []).length,
   note: p.note || "",
   ultimaVolta: "",
 });
@@ -49,9 +52,30 @@ const LIMITI = { giorni_estate: [1, 90], giorni_inverno: [1, 120], ogni_giorni: 
 
 // Prodotti suggeriti oltre a quelli già usati (dalla memoria delle piante).
 const PRODOTTI_NOTI = [
-  "Compo liquido piante verdi", "Fortigo Frutti Bio", "Sangue di bue Flortis", "Granulare per agrumi",
+  "Compo liquido piante verdi", "Concime liquido piante fiorite", "Concime per cactus e succulente",
+  "Concime per idrocoltura", "Fortigo Frutti Bio", "Sangue di bue Flortis", "Granulare per agrumi",
   "Chelato di ferro EDDHA", "Concime per acidofile",
 ];
+
+/** Se i cicli vengono ancora dalla specie, li rifà (specie, substrato o irrigazione cambiati). */
+function ricalcolaConcime() {
+  if (bozza?.cicliAuto) bozza.cicli = concimeConsigliato(bozza, stato.specieMie);
+}
+
+/** Riga "Consigliato per …" sopra i cicli, con il pulsante per usarlo se i cicli sono diversi. */
+function consiglioConcime(b) {
+  const specie = specieDi(b);
+  const nomeSpecie = specie !== GENERICA ? specie.nome : b.tipo.trim();
+  if (!nomeSpecie) return "";
+  const consigliato = concimeConsigliato(b, stato.specieMie);
+  const { nome } = programmaDi(b, stato.specieMie);
+  const uguale = stessiCicli(b.cicli, consigliato);
+  return html`
+    <div class="consiglio-concime">
+      <p>${icona("sprout", 16)}<span>Per ${nomeSpecie}: <b>${nome.toLowerCase()}</b>${consigliato.length ? "" : ", nessun concime"}.</span></p>
+      ${uguale ? "" : html`<button class="chip" type="button" data-azione="concime-consigliato">${icona("undo", 15)}Usa il consigliato</button>`}
+    </div>`;
+}
 
 const cicloNuovo = (b) => ({
   prodotto: "", ogni_giorni: 21, dal_mese: 3, al_mese: 9, con_acqua: !b.irrigazione_automatica, note: "",
@@ -84,7 +108,7 @@ const riga = (nome, valore, contenuto, classe = "") => html`
 
 /** Specie: decide la foto. Specie note con la foto, più quelle senza foto che hai già usato. */
 function suggerimentiSpecie(testo) {
-  const { risultati, esiste } = cercaSpecie(testo, tipi());
+  const { risultati, esiste } = cercaSpecie(testo, [...tipi(), ...stato.specieMie.map((x) => x.nome)]);
   const nuova = testo.trim();
   // Una parola sola che è un genere noto ("Ficus") prende comunque la foto della specie: lo dico.
   const trovata = nuova && specieDi({ tipo: nuova });
@@ -224,7 +248,8 @@ export function render(s, { rotta }) {
 
       <fieldset class="gruppo" id="gruppo-concime">
         <legend>Concime</legend>
-        <p class="aiuto">Un ciclo per prodotto: ogni quanti giorni e in quali mesi. Fuori dai mesi la pianta è a riposo.</p>
+        <p class="aiuto">Lo sceglie la specie: puoi cambiarlo. Un ciclo per prodotto, ogni quanti giorni e in quali mesi; fuori dai mesi la pianta è a riposo.</p>
+        ${consiglioConcime(b)}
         <datalist id="prodotti">${[...new Set([...prodotti(), ...PRODOTTI_NOTI])].map((x) => html`<option value="${x}"></option>`)}</datalist>
         <div class="cicli-editor">${b.cicli.map((c, i) => cicloEditor(c, i, b))}</div>
         <button class="chip" type="button" data-azione="aggiungi-ciclo">${icona("plus", 16)}${b.cicli.length ? "Aggiungi un altro concime" : "Aggiungi un concime"}</button>
@@ -320,6 +345,10 @@ async function salva() {
   try {
     const p = await salvaPianta(b);
     const eraNuova = !b.id;
+    // Specie nuova scritta a mano: la ricordo, così la ritrovi nella ricerca e in Account › Specie.
+    if (p.tipo && specieDi(p) === GENERICA && stato.specieMieOk) {
+      aggiungiSpecie(p.tipo).catch((e) => console.error("specie", e));
+    }
     bozza = null;
     toast(eraNuova ? `${p.nome} aggiunta.` : "Modifiche salvate.");
     sostituisci(eraNuova ? "casa" : `pianta/${p.id}`);
@@ -335,7 +364,10 @@ export const azioni = {
   "cerca-scegli": (el) => {
     const nome = el.dataset.cerca;
     bozza[CERCA[nome].campo] = el.dataset.valore;
-    if (nome === "specie" && !bozza.nome.trim()) bozza.nome = el.dataset.valore;
+    if (nome === "specie") {
+      if (!bozza.nome.trim()) bozza.nome = el.dataset.valore;
+      ricalcolaConcime();
+    }
     document.getElementById(nome)?.blur();
     aggiorna({});
   },
@@ -347,30 +379,41 @@ export const azioni = {
   },
   substrato: (el) => {
     bozza.substrato = el.dataset.valore;
+    ricalcolaConcime();
     aggiorna({});
   },
   irrigazione: (el) => {
     bozza.irrigazione_automatica = el.dataset.valore === "true";
+    ricalcolaConcime();
+    aggiorna({});
+  },
+  "concime-consigliato": () => {
+    bozza.cicliAuto = true;
+    ricalcolaConcime();
     aggiorna({});
   },
   "aggiungi-ciclo": () => {
+    bozza.cicliAuto = false;
     bozza.cicli = [...bozza.cicli, cicloNuovo(bozza)];
     aggiorna({});
     requestAnimationFrame(() => document.querySelector(`[data-campo="${bozza.cicli.length - 1}:prodotto"]`)?.focus());
   },
   "togli-ciclo": (el) => {
+    bozza.cicliAuto = false;
     bozza.cicli = bozza.cicli.filter((_, i) => i !== Number(el.dataset.i));
     aggiorna({});
   },
   "passo-ciclo": (el) => {
     const c = bozza.cicli[Number(el.dataset.i)];
     if (!c) return;
+    bozza.cicliAuto = false;
     c.ogni_giorni = limita("ogni_giorni", c.ogni_giorni + Number(el.dataset.delta));
     aggiorna({});
   },
   "ciclo-acqua": (el) => {
     const c = bozza.cicli[Number(el.dataset.i)];
     if (!c) return;
+    bozza.cicliAuto = false;
     c.con_acqua = !c.con_acqua;
     aggiorna({});
   },
@@ -401,6 +444,7 @@ export const input = {
     const [i, campo] = el.dataset.campo.split(":");
     const c = bozza?.cicli[Number(i)];
     if (!c) return;
+    bozza.cicliAuto = false;
     if (campo === "prodotto" || campo === "note") c[campo] = el.value;
     else if (el.value !== "" && Number.isFinite(Number(el.value))) {
       c[campo] = campo === "ogni_giorni" ? limita("ogni_giorni", Number(el.value)) : Number(el.value);

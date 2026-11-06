@@ -212,6 +212,27 @@ create policy "diario: solo il mio" on public.diario
     and exists (select 1 from public.piante p where p.id = pianta_id and p.user_id = (select auth.uid()))
   );
 
+-- ─── Specie aggiunte da te, con il loro programma di concime ─────────
+create table public.specie_mie (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  nome       text not null check (char_length(btrim(nome)) between 1 and 40),
+  concime    text not null default 'verdi'
+             check (concime in ('verdi', 'fiorite', 'succulente', 'agrumi', 'frutto', 'nessuno')),
+  creata_il  timestamptz not null default now()
+);
+create unique index specie_mie_nome_idx on public.specie_mie (user_id, lower(nome));
+
+revoke all on public.specie_mie from anon, authenticated;
+grant select, insert, update, delete on public.specie_mie to authenticated;
+
+alter table public.specie_mie enable row level security;
+
+create policy "specie_mie: solo le mie" on public.specie_mie
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
 -- ─── ping() per il keep-alive ───────────────────────────────────────
 -- Nel progetto dell'Armadio esiste già: "or replace" la lascia identica.
 create or replace function public.ping() returns text
