@@ -1,5 +1,6 @@
 import { html } from "../ui/html.js";
 import { icona } from "../ui/icone.js";
+import { livelloAcqua } from "../ui/livello.js";
 import { inOrdine, cicliDi } from "../stato.js";
 import { testata, vuoto, contaPiante, statoBreve, concimeBreve, verbi, dettagli, miniatura } from "./comuni.js";
 
@@ -49,10 +50,20 @@ export function render(s, { avviso = "" } = {}) {
     })}`;
 }
 
+// Livello dell'acqua mostrato l'ultima volta, per pianta: se sale (l'hai appena bagnata) la goccia si riempie
+// partendo da lì, invece di comparire già piena.
+const livelliPrima = new Map();
+
+/** Quanta acqua resta: piena il giorno in cui la bagni, vuota quando è ora di controllarla. */
+const livelloDi = (st) => (st.giorni > 0 ? Math.min(1, Math.max(0, st.mancano / st.giorni)) : 0);
+
 function riga({ pianta: p, stato: st }) {
   const v = verbi(p);
   const info = dettagli(p);
   const concime = concimeBreve(p, cicliDi(p));
+  const livello = livelloDi(st);
+  const prima = livelliPrima.get(p.id);
+  livelliPrima.set(p.id, livello);
   return html`
     <li class="riga-pianta">
       <a class="riga" href="#/pianta/${p.id}">
@@ -65,7 +76,7 @@ function riga({ pianta: p, stato: st }) {
         </span>
       </a>
       ${p.irrigazione_automatica ? "" : html`
-        <button class="icona-btn goccia" type="button" data-azione="bagnata" data-id="${p.id}"
-          aria-label="${p.nome}: ${v.fatta} adesso">${icona(v.icona, 20)}</button>`}
+        <button class="icona-btn goccia ${livello === 0 ? "asciutta" : ""}" type="button" data-azione="bagnata" data-id="${p.id}"
+          aria-label="${p.nome}: ${v.fatta} adesso. Acqua rimasta: ${Math.round(livello * 100)}%">${livelloAcqua(v.icona, livello, { da: prima })}</button>`}
     </li>`;
 }

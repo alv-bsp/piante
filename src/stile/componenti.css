@@ -1069,3 +1069,19 @@ option { background: #1a3419; color: #fff; }
   border: 3px solid var(--c);
   border-radius: 50%;
 }
+
+/* ───────── Goccia con il livello dell'acqua (Casa, ui/livello.js) ─────────
+   In un SVG i px di transform sono unità del viewBox (24): --vuoto dice di quanto scende l'acqua. */
+.livello { overflow: visible; }
+.livello-acqua { transform: translateY(calc(var(--vuoto) * 1px)); }
+.livello-onda { animation: onda 2.8s linear infinite; }
+.livello.sale .livello-acqua { animation: livello-sale 1100ms cubic-bezier(.25, .8, .3, 1) backwards; }
+#app[data-entra] .livello-acqua {
+  animation: livello-entra 1000ms cubic-bezier(.25, .8, .3, 1) backwards;
+  animation-delay: calc(260ms + var(--gia, 0ms));
+}
+@keyframes onda { to { transform: translateX(12px); } }
+@keyframes livello-sale { from { transform: translateY(calc(var(--da) * 1px)); } }
+@keyframes livello-entra { from { transform: translateY(calc((var(--pieno) + 1.2) * 1px)); } }
+/* Vuota: è ora di controllarla. Il contorno si accende di verde. */
+.icona-btn.goccia.asciutta { border-color: rgba(63, 224, 111, .55); color: var(--accento-chiaro); }
