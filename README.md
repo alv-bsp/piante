@@ -201,5 +201,6 @@ test/                              node --test
 ## Licenze
 
 Plus Jakarta Sans: SIL Open Font License 1.1 (`src/assets/OFL-PlusJakartaSans.txt`). Icone: Lucide, licenza ISC.
-Foto: Unsplash, licenza Unsplash (https://unsplash.com/license), scontornate. Gli id delle originali sono in
-`src/specie.js` (campo `unsplash`); ogni foto si apre su `https://images.unsplash.com/photo-<id>`.
+Foto delle specie, scontornate: in parte da Unsplash, licenza Unsplash (https://unsplash.com/license); gli id delle
+originali sono in `src/specie.js` (campo `unsplash`) e ogni foto si apre su `https://images.unsplash.com/photo-<id>`.
+Le altre (dove `unsplash` è null) le ha scelte Alessandro da siti di vivai e negozi: i diritti restano ai loro autori.

@@ -2,6 +2,11 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage
 
+# Foto scelte da Alessandro (6 novembre 2026): sostituiscono quelle sotto per queste specie.
+R_UTENTE = {n: dict(src="u2net", file=f"{n}-u") for n in [
+  "alocasia", "begonia-corallina", "begonia-maculata", "dieffenbachia", "ficus-lyrata", "melo",
+  "monstera-adansonii", "monstera-variegata", "monstera-deliciosa", "philodendron-birkin", "strelitzia-nicolai"]}
+
 R = {
   "monstera-variegata": dict(src="sam"),
   "monstera-adansonii": dict(src="u2net", file="monstera-adansonii-b", taglio=0.855, buchi=0.69),
@@ -49,6 +54,7 @@ def rosso(im):
 
 import sys
 solo = sys.argv[1:]
+R.update(R_UTENTE)
 for nome, r in R.items():
     if solo and nome not in solo: continue
     im, a = carica(nome, r)

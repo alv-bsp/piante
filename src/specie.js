@@ -1,5 +1,6 @@
-// Una foto per specie: foto Unsplash (licenza Unsplash: uso libero, anche modificate; i crediti sono nel README)
-// scontornate e salvate in public/specie/ come WebP trasparenti, una grande e una mini. Il fondo giallo pastello
+// Una foto per specie, scontornata e salvata in public/specie/ come WebP trasparente, una grande e una mini.
+// Origine: Unsplash (campo `unsplash`, licenza Unsplash; crediti nel README) oppure, dove `unsplash` è null,
+// una foto scelta da Alessandro (6 novembre 2026). Il fondo giallo pastello
 // comune a tutte lo mette il CSS (.foto). Come sono state fatte: scripts/specie/.
 //
 // La specie di una pianta si ricava da tipo e nome: "Ficus lyrata", "Ficus" o "ficus lirata" danno tutti il
@@ -8,24 +9,24 @@
 // disegnato sul fondo giallo.
 
 export const SPECIE = [
-  { nome: "Monstera variegata", regola: /variegat|thai|albo/, file: "monstera-variegata", unsplash: "1640039986048-885b4234b749" },
-  { nome: "Monstera adansonii", regola: /adansonii/, file: "monstera-adansonii", unsplash: "1695117083502-b77540b861bf" },
-  { nome: "Monstera deliciosa", altri: ["costola d'adamo"], regola: /monstera|deliciosa/, file: "monstera-deliciosa", unsplash: "1637967885705-a60e3fea266d" },
-  { nome: "Ficus lyrata", altri: ["ficus lira", "fiddle leaf"], regola: /ficus|lyrata|lirata/, file: "ficus-lyrata", unsplash: "1545239705-1564e58b9e4a" },
-  { nome: "Strelitzia nicolai", altri: ["uccello del paradiso"], regola: /strelitzia|paradiso/, file: "strelitzia-nicolai", unsplash: "1731486744843-c7ecce11a707" },
-  { nome: "Alocasia", altri: ["orecchie d'elefante"], regola: /alocasia/, file: "alocasia", unsplash: "1650522462224-e2d6f7e9bcbe" },
-  // La maculata di casa è la forma scura: foglie quasi nere, frastagliate, a pois. La foto è una foglia sola.
-  { nome: "Begonia maculata", altri: ["begonia a pois", "polka dot"], regola: /maculata|polka/, file: "begonia-maculata", unsplash: "1611825970805-5ffedce2f2d1" },
-  { nome: "Begonia corallina", altri: ["ali d'angelo", "angel wing"], regola: /corallina|ali d.angelo|angel ?wing/, file: "begonia-corallina", unsplash: "1677025461171-d1e31d353b44" },
+  { nome: "Monstera variegata", regola: /variegat|thai|albo/, file: "monstera-variegata", unsplash: null },
+  { nome: "Monstera adansonii", regola: /adansonii/, file: "monstera-adansonii", unsplash: null },
+  { nome: "Monstera deliciosa", altri: ["costola d'adamo"], regola: /monstera|deliciosa/, file: "monstera-deliciosa", unsplash: null },
+  { nome: "Ficus lyrata", altri: ["ficus lira", "fiddle leaf"], regola: /ficus|lyrata|lirata/, file: "ficus-lyrata", unsplash: null },
+  { nome: "Strelitzia nicolai", altri: ["uccello del paradiso"], regola: /strelitzia|paradiso/, file: "strelitzia-nicolai", unsplash: null },
+  { nome: "Alocasia", altri: ["orecchie d'elefante"], regola: /alocasia/, file: "alocasia", unsplash: null },
+  // La maculata di casa è la forma scura: foglie quasi nere, frastagliate, a pois.
+  { nome: "Begonia maculata", altri: ["begonia a pois", "polka dot"], regola: /maculata|polka/, file: "begonia-maculata", unsplash: null },
+  { nome: "Begonia corallina", altri: ["ali d'angelo", "angel wing"], regola: /corallina|ali d.angelo|angel ?wing/, file: "begonia-corallina", unsplash: null },
   { nome: "Begonia rex", regola: /begonia|\brex\b/, file: "begonia-rex", unsplash: "1776548566577-4a0e2248683b" },
-  { nome: "Philodendron Birkin", regola: /birkin/, file: "philodendron-birkin", unsplash: "1611068121255-6c385c1ae32c" },
+  { nome: "Philodendron Birkin", regola: /birkin/, file: "philodendron-birkin", unsplash: null },
   { nome: "Philodendron", regola: /philodendron|filodendr/, file: "philodendron", unsplash: "1692896315703-f700fd67c921" },
   { nome: "Pothos", altri: ["epipremnum", "potos", "epipremnum aureum"], regola: /pothos|potos|epipremnum/, file: "pothos", unsplash: "1596724878582-76f1a8fdc24f" },
   { nome: "Fittonia", altri: ["pianta mosaico"], regola: /fittonia/, file: "fittonia", unsplash: "1564227304611-80a3288811a8" },
-  { nome: "Dieffenbachia", regola: /dieffenbachia|diffenbachia|difenbachia/, file: "dieffenbachia", unsplash: "1631556941887-f81ab0ecfda9" },
+  { nome: "Dieffenbachia", regola: /dieffenbachia|diffenbachia|difenbachia/, file: "dieffenbachia", unsplash: null },
   { nome: "Sansevieria trifasciata", altri: ["lingua di suocera", "snake plant", "dracaena trifasciata"], regola: /sansevieria|sanseveria|trifasciata|lingua di suocera|snake/, file: "sansevieria", unsplash: "1687552212914-03a30c82053c" },
   { nome: "Limone", altri: ["citrus", "citrus limon", "agrumi"], regola: /limone|citrus|agrum/, file: "limone", unsplash: "1575574202227-6b68bd6e3f29" },
-  { nome: "Melo", altri: ["malus", "malus domestica", "mele"], regola: /\bmelo\b|malus|\bmele\b/, file: "melo", unsplash: "1629389204508-480beb78e10f" },
+  { nome: "Melo", altri: ["malus", "malus domestica", "mele"], regola: /\bmelo\b|malus|\bmele\b/, file: "melo", unsplash: null },
 ];
 
 /** Specie sconosciuta: niente foto. */
