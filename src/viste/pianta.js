@@ -100,7 +100,7 @@ export function render(s, { rotta, avviso = "" }) {
     ${avviso}
     <article class="scheda">
       <div class="scheda-titolo">
-        <h1 tabindex="-1">${p.nome}</h1>
+        <h1>${p.nome}</h1>
         <p class="specie">${specie.nome === "Pianta" ? p.tipo || p.stanza : specie.nome} · ${p.stanza}</p>
       </div>
 

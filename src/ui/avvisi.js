@@ -1,7 +1,5 @@
 // Toast in basso (con un'azione facoltativa, es. Annulla) e foglio dal basso (un <dialog> unico in index.html).
 // Il foglio sale e scende animato, e si chiude anche trascinandolo giù.
-import { fermo } from "./effetti.js";
-
 let timer = null;
 let azioneToast = null;
 
@@ -60,7 +58,7 @@ export const foglioAperto = (nome) => foglio().open && !chiusura && (!nome || fo
 export function chiudiFoglio({ subito = false } = {}) {
   const d = foglio();
   if (!d.open) return;
-  if (subito || fermo()) {
+  if (subito) {
     clearTimeout(chiusura);
     chiusura = null;
     d.classList.remove("chiude");

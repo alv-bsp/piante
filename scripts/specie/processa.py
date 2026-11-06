@@ -4,12 +4,12 @@ from scipy import ndimage
 
 R = {
   "monstera-variegata": dict(src="sam"),
-  "monstera-adansonii": dict(src="u2net", pelle=True, taglio=0.43),
+  "monstera-adansonii": dict(src="u2net", file="monstera-adansonii-b", taglio=0.855, buchi=0.69),
   "monstera-deliciosa": dict(src="sam"),
   "ficus-lyrata": dict(src="sam"),
   "strelitzia-nicolai": dict(src="isnet-general-use"),
   "alocasia": dict(src="u2net", pelle=True, taglio=0.83),
-  "begonia-maculata": dict(src="u2net"),
+  "begonia-maculata": dict(src="u2net", file="begonia-maculata-n"),
   "begonia-rex": dict(src="isnet-general-use"),
   "begonia-corallina": dict(src="isnet-general-use"),
   "philodendron": dict(src="sam"),
@@ -47,12 +47,21 @@ def rosso(im):
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     return ((h < 12) | (h > 235)) & (s > 90) & (v > 60)
 
+import sys
+solo = sys.argv[1:]
 for nome, r in R.items():
+    if solo and nome not in solo: continue
     im, a = carica(nome, r)
     H = a.shape[0]
     if r.get("pelle"): a[pelle(im)] = 0
     if r.get("rosso"): a[ndimage.binary_dilation(rosso(im), iterations=3)] = 0
     if r.get("taglio"): a[int(r["taglio"] * H):] = 0
+    if r.get("buchi"):
+        # I buchi delle foglie (adansonii) mostrano lo sfondo chiaro: sopra il vaso, chiaro e poco saturo = buco.
+        hsv = np.asarray(im.convert("HSV"), dtype=np.int16)
+        buco = (hsv[..., 2] > 140) & (hsv[..., 1] < 60)
+        buco[int(r["buchi"] * H):] = False
+        a[ndimage.binary_dilation(ndimage.binary_opening(buco, iterations=1), iterations=1)] = 0
     if r.get("limite"):
         f = r.get("file", nome)
         m = np.asarray(Image.open(f"cut/{f}.sam.png").convert("L").resize(im.size)) > 127

@@ -10,7 +10,7 @@ export function testata(titolo, sotto = "", azione = "") {
     <header class="testata">
       <div>
         ${sotto ? html`<p class="sotto">${sotto}</p>` : ""}
-        <h1 tabindex="-1">${titolo}</h1>
+        <h1>${titolo}</h1>
       </div>
       ${azione}
     </header>`;
@@ -21,7 +21,7 @@ export function barra({ indietro, href, azione = "", titolo = "" }) {
   return html`
     <header class="barra">
       <a class="indietro" href="${href}" aria-label="${indietro}"><span class="icona-btn" aria-hidden="true">${icona("chevron-left", 20)}</span></a>
-      ${titolo ? html`<h1 class="barra-titolo" tabindex="-1">${titolo}</h1>` : html`<span aria-hidden="true"></span>`}
+      ${titolo ? html`<h1 class="barra-titolo">${titolo}</h1>` : html`<span aria-hidden="true"></span>`}
       <div class="barra-azione">${azione}</div>
     </header>`;
 }

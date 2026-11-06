@@ -9,12 +9,13 @@
 
 export const SPECIE = [
   { nome: "Monstera variegata", regola: /variegat|thai|albo/, file: "monstera-variegata", unsplash: "1640039986048-885b4234b749" },
-  { nome: "Monstera adansonii", regola: /adansonii/, file: "monstera-adansonii", unsplash: "1695219912635-c873f773b69a" },
+  { nome: "Monstera adansonii", regola: /adansonii/, file: "monstera-adansonii", unsplash: "1695117083502-b77540b861bf" },
   { nome: "Monstera deliciosa", altri: ["costola d'adamo"], regola: /monstera|deliciosa/, file: "monstera-deliciosa", unsplash: "1637967885705-a60e3fea266d" },
   { nome: "Ficus lyrata", altri: ["ficus lira", "fiddle leaf"], regola: /ficus|lyrata|lirata/, file: "ficus-lyrata", unsplash: "1545239705-1564e58b9e4a" },
   { nome: "Strelitzia nicolai", altri: ["uccello del paradiso"], regola: /strelitzia|paradiso/, file: "strelitzia-nicolai", unsplash: "1731486744843-c7ecce11a707" },
   { nome: "Alocasia", altri: ["orecchie d'elefante"], regola: /alocasia/, file: "alocasia", unsplash: "1650522462224-e2d6f7e9bcbe" },
-  { nome: "Begonia maculata", altri: ["begonia a pois", "polka dot"], regola: /maculata|polka/, file: "begonia-maculata", unsplash: "1663647733214-3286521f6660" },
+  // La maculata di casa è la forma scura: foglie quasi nere, frastagliate, a pois. La foto è una foglia sola.
+  { nome: "Begonia maculata", altri: ["begonia a pois", "polka dot"], regola: /maculata|polka/, file: "begonia-maculata", unsplash: "1611825970805-5ffedce2f2d1" },
   { nome: "Begonia corallina", altri: ["ali d'angelo", "angel wing"], regola: /corallina|ali d.angelo|angel ?wing/, file: "begonia-corallina", unsplash: "1677025461171-d1e31d353b44" },
   { nome: "Begonia rex", regola: /begonia|\brex\b/, file: "begonia-rex", unsplash: "1776548566577-4a0e2248683b" },
   { nome: "Philodendron Birkin", regola: /birkin/, file: "philodendron-birkin", unsplash: "1611068121255-6c385c1ae32c" },

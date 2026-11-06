@@ -185,7 +185,7 @@ test/                              node --test
   rilascio con un rimbalzo, schizzi d'acqua, vibrazione) senza aspettare Supabase; se il salvataggio fallisce, la
   carta che se ne stava andando torna al suo posto. Il cambio pagina usa le View Transitions (Safari 18+): la foto
   vola dall'elenco al ritratto. La vibrazione su iPhone passa da un interruttore nativo invisibile, perché Safari non
-  ha la Vibration API. Con "Riduci movimento" attivo resta tutto fermo.
+  ha la Vibration API.
 
 ## Licenze
 

@@ -1,8 +1,7 @@
 // Micro interazioni: vibrazione, schizzi d'acqua, foglioline, cuori, coriandoli, molla, transizioni tra pagine.
 // #app si ridisegna con innerHTML, quindi le particelle vivono in un livello fisso fuori dall'app e sopravvivono
-// ai ridisegni. Con "Riduci movimento" non parte niente (resta solo la vibrazione).
+// ai ridisegni.
 
-export const fermo = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let livello = null;
 function strato() {
@@ -86,7 +85,7 @@ const CUORE = '<svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5
 
 /** Schizzi dal centro di un elemento: gocce d'acqua o foglioline verdi (concime). */
 export function schizzi(el, tipo = "acqua", { quante = 14, forza = 1 } = {}) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   const { x, y } = centro(el);
   const acqua = tipo === "acqua";
   anello(x, y, acqua ? "#7dd3fc" : "#8ef0a8", 2.6 * forza);
@@ -109,7 +108,7 @@ export function schizzi(el, tipo = "acqua", { quante = 14, forza = 1 } = {}) {
 
 /** Piccole cose che salgono piano dall'elemento: cuori, "z". */
 function sali(el, { classe, contenuto, colori, quanti = 5, dimensione = [14, 24] }) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   const r = el.getBoundingClientRect();
   for (let i = 0; i < quanti; i++) {
     particella({
@@ -139,7 +138,7 @@ export const zeta = (el) =>
 
 /** Festa: coriandoli di gocce e foglie (l'ultima pianta del giorno sistemata). */
 export function festa(el) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   const { x, y } = centro(el);
   anello(x, y, "#3fe06f", 4, 800);
   for (let i = 0; i < 34; i++) {
@@ -163,7 +162,7 @@ export function festa(el) {
 
 /** Schiaccia e allunga un elemento, come una gelatina. */
 export function molla(el, forza = 1) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   const s = (a) => (1 + a * forza).toFixed(3);
   el.animate(
     [
@@ -179,7 +178,7 @@ export function molla(el, forza = 1) {
 
 /** Un piccolo sobbalzo (es. la mascotte quando tocchi Bagna, prima che arrivi la risposta). */
 export function saltello(el) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   el.animate(
     [{ transform: "none" }, { transform: "translateY(-10px) rotate(-4deg)", offset: 0.4 }, { transform: "none" }],
     { duration: 380, easing: "cubic-bezier(.3,.7,.4,1)" },
@@ -188,7 +187,7 @@ export function saltello(el) {
 
 /** Un'occhiata di conferma su una riga o una carta appena segnata. */
 export function lampo(el) {
-  if (fermo() || !el?.isConnected) return;
+  if (!el?.isConnected) return;
   el.animate(
     [{ boxShadow: "inset 0 0 0 999px rgba(63,224,111,.22)" }, { boxShadow: "inset 0 0 0 999px rgba(63,224,111,0)" }],
     { duration: 900, easing: "ease-out" },
@@ -197,7 +196,7 @@ export function lampo(el) {
 
 /** Una carta che se ne va (la pianta non è più da fare oggi). Ritorna la funzione per rimetterla se il salvataggio fallisce. */
 export function congeda(el) {
-  if (fermo() || !el?.isConnected) return () => {};
+  if (!el?.isConnected) return () => {};
   const h = el.getBoundingClientRect().height;
   const a = el.animate(
     [
@@ -216,7 +215,7 @@ export function congeda(el) {
  */
 let gettone = 0;
 export function transizione(tipo, cambia) {
-  if (fermo() || !document.startViewTransition) {
+  if (!document.startViewTransition) {
     cambia();
     return;
   }

@@ -278,7 +278,6 @@ window.addEventListener("hashchange", () => {
       await fotoPronta(app.querySelector(".ritratto-foto img"));
     } else if (dallaScheda) nomina(fotoInElenco(da.param[0]));
     else nomina(null);
-    document.querySelector("#vista h1")?.focus({ preventScroll: true });
   });
 });
 

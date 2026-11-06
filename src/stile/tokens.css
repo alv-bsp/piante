@@ -50,7 +50,3 @@
 
   color-scheme: dark;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  :root { --dur: 0ms; --dur-long: 0ms; }
-}
